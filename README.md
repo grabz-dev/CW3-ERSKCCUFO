@@ -23,5 +23,21 @@ This unit will deal damage to friendly units in range. Below is a list of all pr
    * *Waypoint1/2/3...* - Designate the coordinates the unit should move between. Always start from Waypoint1. Input coordinates in this format: `x,y`. For example, if you set Waypoint1 to `0,0`, Waypoint2 to `0,10` and Waypoint3 to `10,10`, the unit will move in a triangle shape around the top left corner of the map.
 
 ## KCC
+Kajacx Creeper Cloud
+
+A Cloud Maker unit (rainmaker) that will collect creeper or anticreeper to create a cloud. Once enough C/AC is collected, the cloud starts moving towards nearest opposing units, raining creeper or AC down on the ground as it goes.
+
+### CloudMaker.crpl
+   * Cloud Maker Settings:
+   * *CreeperNeeded* - The amount of creeper or AC needed to create a cloud.
+   * *CreeperMultiplier* - When cloud is created, it will have *CreeperNeeded* x *CreeperMultiplier* C/AC total ready to rain down.
+   * *TeamLock* - Lock the Cloud Maker to specific team - 1 = Enemy (accepts only C), -1 = Friendly (accepts only AC), 0 = Neutral (accepts both C/AC).
+   * *WaitTime* - Wait for this many seconds before starting to collect C/AC and producing clouds.
+   
+   * Cloud Settings:
+   * *CloudMaxHealth* - Health of the clouds, clouds can be damaged by beams.
+   * *CloudRainAmount* - C/AC "rained" (added per frame), this will drain the cloud's C/AC reserve until the cloud dissapears.
+   * *CloudRainSpeed* - Cloud movement speed, in pixels per frame. 1 cell per second is approx 0.5 pixels per frame.
+   * *CloudMaxRange* - Cloud aggro range, in cells. Clouds will only target units in this range from them. Use 9999 for infinite range.
 
 ## UFO
