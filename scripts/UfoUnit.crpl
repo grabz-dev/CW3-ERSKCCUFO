@@ -162,6 +162,8 @@ endif
     "Custom" <-ImageOffset 17 add concat ->IMG_GUPPYAIR
     "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
+    
+    "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
 
     12 ->IMAGE_SIZE
     0 ->IMAGE_NAME
@@ -337,7 +339,6 @@ endif
     <-dist <-Speed lte if
         Self CONST_PIXELCOORDX <-tx SetUnitAttribute
         Self CONST_PIXELCOORDY <-ty SetUnitAttribute
-        <-Target 0 SetUnitSelectableOverride
         @EnterBeamDown
     else
         Self CONST_PIXELCOORDX <-cx add(<-VX) SetUnitAttribute
@@ -378,6 +379,7 @@ endif
     <-Elevation ->riseLevel
     0.1 ->fallSpeed
     0 ->wobble
+    0 ->fallThru
 
     <-State ->OldState
     <-STATE_FALLING ->State
@@ -397,13 +399,25 @@ endif
     Self "main" <-wobble sin 0.25 mul SetImageRotation
     Self "shadow" <-wobble sin 0.25 mul SetImageRotation
 
-    <-riseLevel 0 gt if
-        Self "shadow" <-riseLevel <-Elevation div <-ShadowX mul SetImagePositionX
-        Self "shadow" <-riseLevel <-Elevation div <-ShadowY mul SetImagePositionY
+    <-fallThru if
+        Self CONST_PIXELCOORDY GetUnitAttribute -2000 lte if
+            Self 0 Destroy
+        endif
     else
-        Self "shadow" 0 SetImagePositionX
-        Self "shadow" 0 SetImagePositionY
-        @EnterCrashed
+        <-riseLevel 0 gt if
+            Self "shadow" <-riseLevel <-Elevation div <-ShadowX mul SetImagePositionX
+            Self "shadow" <-riseLevel <-Elevation div <-ShadowY mul SetImagePositionY
+        else
+            CurrentCoords GetTerrain 0 lte if
+                Self "shadow" "none" SetImage
+                Self "main" 20 SetImagePositionZ # behind terrain
+                1 ->fallThru
+            else
+                Self "shadow" 0 SetImagePositionX
+                Self "shadow" 0 SetImagePositionY
+                @EnterCrashed
+            endif
+        endif
     endif
 
 :EnterCrashed
@@ -425,6 +439,7 @@ endif
 :EnterBeamDown
     RandFloat 0.5 sub ->VX
     RandFloat 0.5 sub ->VY
+    <-Target 0 SetUnitSelectableOverride
     0 ->beamAnim
     <-SOUND_BEAMDOWN PlaySound
     <-STATE_BEAM_DOWN ->State
@@ -435,6 +450,7 @@ endif
             Self "back" I concat 0 0 SetImageScale
             Self "front" I concat 0 0 SetImageScale
         loop
+        <-Target 1 SetUnitSelectableOverride
         return
     endif
 
@@ -479,12 +495,15 @@ endif
     "IMG_" <-type concat -?! if
         <-IMAGE_SIZE CreateListStartingSize ->image
         <-image <-IMAGE_NAME "IMG_" <-type concat <-! SetListElement
+        <-image <-IMAGE_SCALEX 1 SetListElement
+        <-image <-IMAGE_SCALEY 1 SetListElement
         <-type "BERTHA" eq if
             <-image <-IMAGE_SCALEX 1.666666 SetListElement
             <-image <-IMAGE_SCALEY 1.666666 SetListElement
-        else
-            <-image <-IMAGE_SCALEX 1 SetListElement
-            <-image <-IMAGE_SCALEY 1 SetListElement
+        endif
+        <-type "COMMANDNODE" eq if
+            <-image <-IMAGE_SCALEX 3 SetListElement
+            <-image <-IMAGE_SCALEY 3 SetListElement
         endif
         <-image <-IMAGE_POSX 0 SetListElement
         <-image <-IMAGE_POSY 0 SetListElement
@@ -570,7 +589,7 @@ endif
     @LoadTargetImages
     @CreateTargetImages
     
-    # save upducted unit
+    # save updacted unit
     <-Target GetUnitType "AIR" "" StringReplace ->AbductedType
     <-Target GetUnitType "CRPLCORE" eq if
         <-Target CONST_CREATEPZ 0 SetUnitAttribute
@@ -580,6 +599,10 @@ endif
         <-AbductedVars GetListCount 0 do
             <-AbductedVals <-Target <-AbductedScript <-AbductedVars I GetListElement GetScriptVar AppendToList
         loop
+    endif
+    # move CN so it doesn't show the ascend animation
+    <-AbductedType "COMMANDNODE" eq if
+        <-Target CONST_PIXELCOORDX 10000 SetUnitAttribute
     endif
     <-Target 0 @SafeDestroy
 
@@ -671,7 +694,7 @@ endif
 
 :RebuildUnit # x y -
     ->y ->x
-    -?AbductedType <-AbductedType "" neq and if
+    -?AbductedType <-AbductedType "" neq <-AbductedType "COMMANDNODE" neq and and if
         <-x 0 gte <-x MapWidth lt <-y 0 gte <-y MapHeight lt and and and if
             <-AbductedType <-x <-y CreateUnit ->uid
             <-AbductedType "CRPLCORE" eq if
@@ -744,7 +767,7 @@ endif
     <-HealthSlave 0 Destroy
     <-AmmoSlave 0 Destroy
 
-    <-State <-STATE_RETREAT neq if
+    <-State <-STATE_CRASHED eq if
         <-SOUND_DESTROYED PlaySound
         # rebuild abducted unit
         CurrentCoords @RebuildUnit

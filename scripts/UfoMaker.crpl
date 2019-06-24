@@ -87,6 +87,8 @@ endif
     "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
+    "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
+    
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
 
 :CreateUFO
