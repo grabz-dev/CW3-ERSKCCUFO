@@ -1,5 +1,5 @@
-# CW3-ERSUFO
-Creeper World 3 mapping template for the ERS+UFO gamemode.
+# CW3-ERSKCCUFO
+Creeper World 3 mapping template for the ERS+KCC+UFO gamemode.
 
 Creeper World 3 is property of https://knucklecracker.com/
 
@@ -21,3 +21,7 @@ This unit will deal damage to friendly units in range. Below is a list of all pr
 ### ERSUnitMovement.crpl
    * *Speed* - The speed the unit will move at, measured in cells travelled per second.
    * *Waypoint1/2/3...* - Designate the coordinates the unit should move between. Always start from Waypoint1. Input coordinates in this format: `x,y`. For example, if you set Waypoint1 to `0,0`, Waypoint2 to `0,10` and Waypoint3 to `10,10`, the unit will move in a triangle shape around the top left corner of the map.
+
+## KCC
+
+## UFO
