@@ -1,0 +1,250 @@
+# CloudMaker.crpl
+# Created on: 9/20/2018 6:07:05 PM
+# ------------------------------------------
+
+# cloudmaker settings
+$CreeperNeeded:500.0 # How much C/AC is needed to create a cloud
+$CreeperMultiplier:3.5 # The creeper cloud will produce X times more creeper than is needed to create it. Set to 0 for infinite creeper cloud.
+$TeamLock:0 # Lock the cloud maker to only one team: 1 only creeper, -1 only AC, 0 for both
+$WaitTime:0 # wait for X seconds before starting to produce clouds
+
+$CloudMaxHealth:2.0 # I beleive spore has 1 health by default ?
+$CloudRainAmount:4.0 # Creeper/AC added per frame
+$CloudRainSpeed:0.5 #in pixels per frame, 1 cell per second would be approx 0.25
+$CloudMaxRange:9999 # maximum aggro range in cells
+
+$ImageMakerBorder:"Custom8"
+$ImageMakerBody:"Custom9"
+$ImageMakerWaves:"Custom10"
+$ImageRange:"Custom1_256"
+$ImageNullifier:"Custom11"
+
+$IsCloudMaker:1
+
+#$ReadyFlag:1 # set from the cloud one it aggros
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+    
+    <-TeamLock 0 gte ->nullifiable
+
+    @Awake
+    
+    1 ->ReadyFlag # keep this ON while building the cloud
+    
+    Self CONST_MAXAMMO <-CreeperNeeded SetUnitAttribute
+    Self CONST_AMMO 0 SetUnitAttribute
+    Self CONST_MAXAMMOAC <-CreeperNeeded SetUnitAttribute
+    Self CONST_AMMOAC 0 SetUnitAttribute
+    
+    <-CreeperNeeded 300.0 div ->maxIntake
+    0.0 ->creeper
+    0.0 ->lastCreeper
+    
+    -1 ->cloudId
+    
+    <-TeamLock 0 gte if
+        <-maxIntake ->MAXI
+    else
+        0 ->MAXI
+    endif
+    <-TeamLock 0 lte if
+        <-maxIntake neg ->MINI
+    else
+        0 ->MINI
+    endif
+    
+    <-WaitTime 30 mul ->waittime
+    
+    Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
+        Self "TeamFlag.crpl" AddScriptToUnit
+    endif
+    Self "TeamFlag.crpl" "ScriptName" "CloudMaker" SetScriptVar
+    CreateList ->varnames
+    <-varnames "CreeperNeeded" AppendToList
+    <-varnames "CreeperMultiplier" AppendToList
+    <-varnames "CloudMaxHealth" AppendToList
+    <-varnames "CloudRainAmount" AppendToList
+    <-varnames "CloudRainSpeed" AppendToList
+    <-varnames "CloudMaxRange" AppendToList
+    Self "TeamFlag.crpl" "SavedVariables" <-varnames SetScriptVar
+
+    @CreateImages
+endonce
+
+GetMouseCell CurrentY sub abs 1 lte swap CurrentX sub abs 1 lte and if
+    Self "range" 255 255 255 255 SetImageColor
+    0 GetMouseButtonDown <-TeamLock eq0 and if
+        <-nullifiable not ->nullifiable
+        Self CONST_NULLIFIERDAMAGES <-nullifiable SetUnitAttribute
+        Self "nullifier" 255 255 255 <-nullifiable 255 mul SetImageColor
+    endif
+else
+    Self "range" 255 255 255 0 SetImageColor
+endif
+
+IsPaused if
+    return
+endif
+
+@SetText
+GetGameTimeFrames <-waittime gte if
+    CurrentCoords GetCreeper <-MINI max <-MAXI min ->intake
+    <-intake neq0 <-ReadyFlag and if
+        <-creeper <-intake add ->creeper
+        <-cloudId -1 neq if
+            <-creeper <-lastCreeper mul 0 lte if
+                #creeper polarity changed, remake the cloud
+                <-cloudId 0 Destroy
+                -1 ->cloudId
+            endif
+        endif
+        <-cloudId -1 eq if
+            @CreateCloud ->cloudId
+        endif
+        CurrentCoords <-intake neg AddCreeper
+        <-cloudId "CreeperCloud.crpl" "Progress" <-creeper <-CreeperNeeded div SetScriptVar
+        <-creeper abs <-CreeperNeeded gte if
+            <-creeper 0 gte 0.5 sub 500.0 div ->creeper
+            -1 ->cloudId
+            0 ->ReadyFlag
+        endif
+        @SetAmmo
+        <-creeper ->lastCreeper
+    endif
+endif
+@HandleTeam
+
+:SetText
+    GetGameTimeFrames <-waittime lt if
+        "Starts producing clouds in " <-waittime GetGameTimeFrames sub 1800 div "m " <-waittime GetGameTimeFrames sub 1800 mod 30 div "s" concat concat concat concat SetPopupText
+    else
+        "" SetPopupText
+    endif
+
+:SetAmmo
+    <-creeper 0 gte if
+        Self CONST_SHOWAMMOBAR 1 SetUnitAttribute
+        Self CONST_SHOWAMMOACBAR 0 SetUnitAttribute
+        Self CONST_AMMO <-creeper SetUnitAttribute
+    else
+        Self CONST_SHOWAMMOBAR 0 SetUnitAttribute
+        Self CONST_SHOWAMMOACBAR 1 SetUnitAttribute
+        Self CONST_AMMOAC <-creeper neg SetUnitAttribute
+    endif
+
+:CreateCloud # - uid
+    "CRPLCORE" CurrentCoords CreateUnit ->uid
+    <-uid "CreeperCloud.crpl" AddScriptToUnit
+    <-uid "CreeperCloud.crpl" "Rainmaker" Self SetScriptVar
+    <-uid "CreeperCloud.crpl" "MaxHealth" <-CloudMaxHealth SetScriptVar
+    <-uid "CreeperCloud.crpl" "RainAmount" <-CloudRainAmount SetScriptVar
+    <-uid "CreeperCloud.crpl" "Speed" <-CloudRainSpeed SetScriptVar
+    <-uid "CreeperCloud.crpl" "MaxPayload" <-CreeperNeeded <-CreeperMultiplier mul SetScriptVar
+    <-uid "CreeperCloud.crpl" "MaxRange" <-CloudMaxRange SetScriptVar
+    <-uid
+    
+    @Recolor
+
+:CreateImages
+    Self RemoveImages
+    
+    Self "border" <-ImageMakerBorder SetImage
+    Self "border" 0 0 0.02 SetImagePosition
+    
+    Self "main" <-ImageMakerBody SetImage
+    Self "main" 0 0 0.01 SetImagePosition
+    
+    Self "waves" <-ImageMakerWaves SetImage
+    Self "waves" 0 0 0 SetImagePosition
+    
+    <-CloudMaxRange 9000 lt if #it's NOT over 9 tousand
+        Self "range" <-ImageRange SetImage
+        Self "range" 0 0 -0.2 SetImagePosition
+        Self "range" <-CloudMaxRange 1.5 div dup SetImageScale 
+    else
+        Self "range" <-ImageMakerBorder SetImage
+        Self "range" 0 0 -0.02 SetImagePosition
+        Self "range" 1.25 1.25 SetImageScale
+    endif
+    
+    Self "nullifier" <-ImageNullifier SetImage
+    Self "nullifier" 0.5 dup SetImageScale
+    Self "nullifier" 8 -8 -0.1 SetImagePosition
+    Self "nullifier" 255 255 255 <-nullifiable 255 mul SetImageColor
+    
+    @Recolor
+
+    3 CreateListStartingSize ->ImageList
+    Self "TeamFlag.crpl" "ImageList" <-ImageList SetScriptVar
+    <-ImageList 0 "border" SetListElement
+    <-ImageList 1 "main" SetListElement
+    <-ImageList 2 "waves" SetListElement
+    Self "TeamFlag.crpl" "Image_border" <-ImageMakerBorder SetScriptVar
+    Self "TeamFlag.crpl" "Image_main" <-ImageMakerBody SetScriptVar
+    Self "TeamFlag.crpl" "Image_waves" <-ImageMakerWaves SetScriptVar
+    
+:Awake
+    Self CONST_TAKEMAPSPACE 1 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    <-TeamLock 0 gte if
+        Self CONST_CREATEPZ 1 SetUnitAttribute
+    else
+        Self CONST_CREATEPZ 0 SetUnitAttribute
+    endif
+    Self CONST_NULLIFIERDAMAGES <-nullifiable SetUnitAttribute
+    1 OperateWhilePaused # only to show/hide range
+    @Recolor
+    @SetAmmo
+    @SetText
+    @HandleTeam
+
+:Destroyed
+    <-cloudId -1 neq if
+        <-cloudId 0 Destroy
+    endif
+    
+:HandleTeam
+    <-creeper 0 gte if
+        Self CONST_COUNTSFORVICTORY 1 SetUnitAttribute
+        Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+        Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar
+    else
+        Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+        Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
+        Self "TeamFlag.crpl" "IsFriendly" 1 SetScriptVar
+    endif
+    
+:SetCreeperRGB # (setrs the color into variables R G B)
+    <-TeamLock neq0 if
+        <-TeamLock
+    else
+        CurrentCoords GetCreeper
+    endif
+    dup eq0 if
+        pop
+        255 ->R 255 ->G 255 ->B #start as white "neutral" color
+    else
+        0 gt if
+            GetCreeperColors pop pop pop 255 mul asint ->B 255 mul asint ->G 255 mul asint ->R #color by creeper
+        else
+            GetCreeperColors 255 mul asint ->B 255 mul asint ->G 255 mul asint ->R pop pop pop #color by anti creeper
+        endif
+    endif
+    
+:Recolor
+    @SetCreeperRGB
+    <-R 128 gte <-G 128 gte <-B 128 gte and and if
+        0 ->BC
+    else
+        255 ->BC
+    endif
+    
+    Self "border" <-BC <-BC <-BC 255 SetImageColor
+    Self "main" <-R <-G <-B 255 SetImageColor
+    Self "waves" <-BC <-BC <-BC 255 SetImageColor
+    
+    

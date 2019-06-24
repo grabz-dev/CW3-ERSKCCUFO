@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="64"
+   height="64"
+   viewBox="0 0 64.000001 64.000001"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="rainmaker.svg"
+   inkscape:export-filename="C:\Users\Karel\Documents\creeperworld3\WorldEditor\FogOfWar\Images\Custom1-Rainmaker.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="5.6"
+     inkscape:cx="51.958126"
+     inkscape:cy="15.058042"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-988.36216)">
+    <rect
+       style="fill:#00c2e1;fill-opacity:1;fill-rule:evenodd;stroke:#256bd1;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:91.30667877;stroke-opacity:1"
+       id="rect4144"
+       width="55.999989"
+       height="55.999989"
+       x="4.0000048"
+       y="992.36218" />
+    <circle
+       style="fill:#951bff;fill-opacity:1;fill-rule:evenodd;stroke:#63198d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:91.30667877;stroke-opacity:1"
+       id="path4138"
+       cx="32"
+       cy="1020.3622"
+       r="25.999994" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffffff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 18.309014,1014.734 c 0.252538,-3.7111 2.724223,-7.3926 7.828683,-7.7024 5.10446,-0.3098 6.193973,8.9486 11.237947,9.0913 5.043975,0.1428 6.684875,-2.0387 7.828682,-6.6923"
+       id="path4142"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="czzc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffffff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 18.494795,1031.2755 c 0.252538,-3.7111 2.724223,-7.3926 7.828683,-7.7024 5.10446,-0.3098 6.193973,8.9486 11.237948,9.0913 5.043975,0.1428 6.684875,-2.0387 7.828682,-6.6923"
+       id="path4142-5"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="czzc" />
+  </g>
+</svg>

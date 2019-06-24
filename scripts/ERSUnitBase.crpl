@@ -65,6 +65,12 @@ once
     <-Decay 1.0 30 60 mul div pow ->G_fDecayPerFrame
 
     8 ->G_iLoopsPerFrame
+    
+    # make unit targetable by clouds
+    Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
+        Self "TeamFlag.crpl" AddScriptToUnit
+    endif
+    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
 
     "AWAKE" ->G_sState
     @awake
