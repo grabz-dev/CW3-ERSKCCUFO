@@ -1,0 +1,343 @@
+# CreeperCould.crpl
+# Created on: 9/20/2018 6:08:57 PM
+# ------------------------------------------
+
+# Set from rainmaker, don't change it here!
+#$MaxHealth:(float)
+#$RainAmount:(float)
+#$Speed:(float)
+#$MaxPayload:(float) total amount of creeper to be used, can be 0 for infinite
+#$Rainmaker:(int) the ID of the rainmaker that created this cloud
+#$MaxRange:(int)
+
+$ImageCloudFill:"Custom12"
+$ImageCloudBorder:"Custom13"
+$ImageRainFill:"Custom14"
+$ImageRainBorder:"Custom15"
+
+$Progress:0.0 # changed from other script (can be negative for anticreep!)
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    <-Progress 0.0 eq if
+        Self 0 Destroy #destroy on recompile
+    endif
+    <-Progress 0 gt ->Enemy # is enemy
+
+    @CreateImages
+    @InitUnitTypes
+    @Awake
+    
+    Self CONST_MAXHEALTH <-MaxHealth SetUnitAttribute
+    Self CONST_HEALTH <-MaxHealth SetUnitAttribute
+
+    <-MaxPayload 0 gte if
+        Self CONST_MAXAMMO <-MaxPayload SetUnitAttribute
+        Self CONST_MAXAMMOAC <-MaxPayload SetUnitAttribute
+        Self CONST_AMMO <-MaxPayload SetUnitAttribute
+        Self CONST_AMMOAC <-MaxPayload SetUnitAttribute
+        
+        <-MaxPayload ->payload
+    endif
+    
+    0 ->built
+    0 ->rainAnimation
+    10 ->rainAnimationMax
+    
+    0 ->rain
+    
+    CurrentCoords CellToPixel ->startY ->startX
+    
+    -1 ->target
+endonce
+
+#update
+<-built if
+    -?AGGRO if
+        #rain increase
+        <-rainAnimation eq0 <-rain <-RainImgs lte and if
+            Self "rainfill" <-rain concat 1 1 SetImageScale
+            Self "rainborder" <-rain concat 1 1 SetImageScale
+        
+            <-rain 1 add ->rain
+        endif
+        
+        #animation
+        <-rainAnimation <-rainAnimationMax div(asfloat) ->relAnim
+        <-RainImgs 1 add 0 do
+            Self "rainfill" I concat 0 I -8 mul <-relAnim -8 mul add 4 add -48 SetImagePosition
+            Self "rainborder" I concat 0 I -8 mul <-relAnim -8 mul add 4 add -49 SetImagePosition
+        loop
+        Self "rainfill0" <-R <-G <-B <-relAnim 255 mul SetImageColor
+        Self "rainborder0" <-BC <-BC <-BC <-relAnim 255 mul SetImageColor
+        Self "rainfill" <-RainImgs concat <-R <-G <-B 1 <-relAnim sub 255 mul SetImageColor
+        Self "rainborder" <-RainImgs concat <-BC <-BC <-BC 1 <-relAnim sub 255 mul SetImageColor
+        
+        <-rainAnimation 1 add <-rainAnimationMax mod ->rainAnimation
+        
+        #add creeper
+        CurrentCoords 6 add GetTerrain -1 neq if
+            <-rain <-RainImgs gt if
+                CurrentCoords 6 add <-RainAmount <-Enemy not if neg endif AddCreeper
+            
+                # handle C/AC drain
+                <-MaxPayload neq0 if
+                    <-payload <-RainAmount sub ->payload
+                    <-payload 0 lte if
+                        #TODO: better destruction animation
+                        Self 0 Destroy
+                    endif
+                    <-Enemy if
+                        Self CONST_AMMO <-payload SetUnitAttribute
+                    else
+                        Self CONST_AMMOAC <-payload SetUnitAttribute
+                    endif
+                endif
+            endif
+        endif
+    endif
+    
+    # reset target if destroyed
+    <-target GetUnitType "" eq <-target CONST_ISLANDED GetUnitAttribute not or if
+        -1 ->target
+    endif
+
+    # try find the target
+    <-target -1 eq if
+        @FindTarget ->target
+    endif
+
+    #if target exists, move to target
+    <-target -1 neq if
+        @Aggro
+        Self CONST_PIXELCOORDX GetUnitAttribute ->cx
+        Self CONST_PIXELCOORDY GetUnitAttribute ->cy
+        <-target CONST_PIXELCOORDX GetUnitAttribute ->tx
+        <-target CONST_PIXELCOORDY GetUnitAttribute 48 add ->ty
+        <-cx <-cy <-tx <-ty Distance ->dist
+        <-dist <-Speed lte if
+            Self CONST_PIXELCOORDX <-tx SetUnitAttribute
+            Self CONST_PIXELCOORDY <-ty SetUnitAttribute
+        else
+            Self CONST_PIXELCOORDX <-cx add(<-tx <-cx sub <-dist div <-Speed mul) SetUnitAttribute
+            Self CONST_PIXELCOORDY <-cy add(<-ty <-cy sub <-dist div <-Speed mul) SetUnitAttribute
+        endif
+    endif
+else
+    <-Progress abs 1 gte if
+        1 ->built
+        1 ->Progress
+        @Awake
+    endif
+    
+    Self CONST_PIXELCOORDY <-startY <-Progress abs 48 mul add SetUnitAttribute
+    
+    Self "fill" <-Progress abs dup SetImageScale
+    Self "border" <-Progress abs dup SetImageScale
+endif
+
+:InitUnitTypes
+    #Targetable Friend
+    1 ->COMMANDNODE_TF
+    1 ->COLLECTOR_TF
+    1 ->RELAY_TF
+    1 ->REACTOR_TF
+    1 ->OREMINE_TF
+    1 ->SIPHON_TF
+    1 ->TERP_TF
+    1 ->GUPPY_TF
+    0 ->GUPPYAIR_TF
+    1 ->SHIELD_TF
+    1 ->PULSECANNON_TF
+    1 ->MORTAR_TF
+    1 ->STRAFER_TF
+    0 ->STRAFERAIR_TF
+    1 ->BOMBER_TF
+    0 ->BOMBERAIR_TF
+    1 ->SPRAYER_TF
+    1 ->NULLIFIER_TF
+    1 ->BEAM_TF
+    1 ->SNIPER_TF
+    1 ->FORGE_TF
+    1 ->BERTHA_TF
+    0 ->THOR_TF
+    0 ->POWERZONE_TF
+    0 ->OREDEPOSIT_TF
+    0 ->RESOURCEPACK_TF
+    0 ->TOTEM_TF
+    0 ->AOO_TF
+    0 ->ANTIEMITTER_TF
+    0 ->SHIELDKEY_TF
+    0 ->TECHARTIFACT_TF
+    0 ->MESSAGEARTIFACT_TF
+    0 ->CRPLCORE_TF
+    0 ->EMITTER_TF
+    0 ->SPORETOWER_TF
+    0 ->RUNNERNEST_TF
+    0 ->RUNNER_TF
+    0 ->AETOWER_TF
+    0 ->INHIBITOR_TF
+    
+    #Targetable Enemy
+    0 ->COMMANDNODE_TE
+    0 ->COLLECTOR_TE
+    0 ->RELAY_TE
+    0 ->REACTOR_TE
+    0 ->OREMINE_TE
+    0 ->SIPHON_TE
+    0 ->TERP_TE
+    0 ->GUPPY_TE
+    0 ->GUPPYAIR_TE
+    0 ->SHIELD_TE
+    0 ->PULSECANNON_TE
+    0 ->MORTAR_TE
+    0 ->STRAFER_TE
+    0 ->STRAFERAIR_TE
+    0 ->BOMBER_TE
+    0 ->BOMBERAIR_TE
+    0 ->SPRAYER_TE
+    0 ->NULLIFIER_TE
+    0 ->BEAM_TE
+    0 ->SNIPER_TE
+    0 ->FORGE_TE
+    0 ->BERTHA_TE
+    0 ->THOR_TE
+    0 ->POWERZONE_TE
+    0 ->OREDEPOSIT_TE
+    0 ->RESOURCEPACK_TE
+    0 ->TOTEM_TE
+    0 ->AOO_TE
+    0 ->ANTIEMITTER_TE
+    0 ->SHIELDKEY_TE
+    0 ->TECHARTIFACT_TE
+    0 ->MESSAGEARTIFACT_TE
+    0 ->CRPLCORE_TE
+    1 ->EMITTER_TE
+    1 ->SPORETOWER_TE
+    1 ->RUNNERNEST_TE
+    1 ->RUNNER_TE
+    1 ->AETOWER_TE
+    1 ->INHIBITOR_TE
+
+:FindTarget # - uid
+    -1 ->uid
+    <-MaxRange ->dist
+    CurrentCoords 6 add <-MaxRange 0 GetAllUnitsInRange 0 do
+        ->try
+        <-try GetUnitType ->type
+
+        #condition
+        <-type "CRPLCORE" eq if
+            <-try "TeamFlag.crpl" <-Enemy if "IsFriendly" else "IsEnemy" endif GetScriptVar
+        else
+            <-Enemy if
+                <-type "_TF" concat <-! <-try CONST_ISLANDED GetUnitAttribute and
+            else
+                <-type "_TE" concat <-!
+            endif
+        endif
+        
+        #action
+        if
+            CurrentCoords 6 add
+            <-try CONST_COORDX GetUnitAttribute
+            <-try CONST_COORDY GetUnitAttribute
+            Distance dup <-dist lt if
+                ->dist
+                <-try ->uid
+            else
+                pop
+            endif
+        endif
+    loop
+    <-uid
+
+:Aggro
+    -?AGGRO not if
+        <-Rainmaker "CloudMaker.crpl" "ReadyFlag" 1 SetScriptVar
+        1 ->AGGRO
+    endif
+    
+:CreateImages
+    Self RemoveImages
+    
+    RandFloat -51 add ->height #random height between -51 and -50
+    
+    Self "fill" <-ImageCloudFill SetImage
+    Self "fill" 0 0 <-height SetImagePosition
+    
+    Self "border" <-ImageCloudBorder SetImage
+    Self "border" 0 0 <-height 0.001 sub SetImagePosition
+    
+    6 ->RainImgs
+    <-RainImgs 1 add 0 do
+        "rainfill" I concat ->name
+        Self <-name <-ImageRainFill SetImage
+        Self <-name 0 0 SetImageScale
+        Self <-name 0 0 -48 SetImagePosition
+        
+        "rainborder" I concat ->name
+        Self <-name <-ImageRainBorder SetImage
+        Self <-name 0 0 SetImageScale
+        Self <-name 0 0 -49 SetImagePosition
+    loop
+    
+    @Recolor
+
+:Awake
+    Self "main" "none" SetImage
+    Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    Self CONST_SHOWAMMOBAR 0 SetUnitAttribute
+    Self CONST_SHOWAMMOACBAR 0 SetUnitAttribute
+    Self CONST_BEAMTARGET 0 SetUnitAttribute
+    Self CONST_SHOWHEALTHBAR 0 SetUnitAttribute
+    <-built if
+        <-Enemy if
+            Self CONST_BEAMTARGET 1 SetUnitAttribute
+            Self CONST_SHOWHEALTHBAR 1 SetUnitAttribute
+        endif
+        <-MaxPayload 0.0 neq if
+            <-Enemy if
+                Self CONST_SHOWAMMOBAR 1 SetUnitAttribute
+            else
+                Self CONST_SHOWAMMOACBAR 1 SetUnitAttribute
+            endif
+        endif
+    endif
+    0 OperateWhilePaused
+    Self CONST_DESTROYMODE 1 SetUnitAttribute
+    @Recolor
+    
+:Destroy
+    @Aggro
+    
+:SetCreeperRGB # (sets the color into variables R G B)
+    <-Enemy if
+        GetCreeperColors pop pop pop 255 mul asint ->B 255 mul asint ->G 255 mul asint ->R #color by creeper
+    else
+        GetCreeperColors 255 mul asint ->B 255 mul asint ->G 255 mul asint ->R pop pop pop #color by anti creeper
+    endif
+        
+:Recolor
+    @SetCreeperRGB
+    <-R 128 gte <-G 128 gte <-B 128 gte and and if
+        0 ->BC
+    else
+        255 ->BC
+    endif
+    
+    Self "fill" <-R <-G <-B 255 SetImageColor
+    Self "border" <-BC <-BC <-BC 255 SetImageColor
+    <-RainImgs 1 add 0 do
+        Self "rainfill" I concat <-R <-G <-B 255 SetImageColor
+        Self "rainborder" I concat <-BC <-BC <-BC 255 SetImageColor
+    loop
+    

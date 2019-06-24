@@ -1,0 +1,11 @@
+# DeleteOnRecompile.crpl
+# Created on: 6/23/2019 1:58:52 PM
+# ------------------------------------------
+
+$KeepAlive:0
+
+once
+    <-KeepAlive not if
+        Self 0 Destroy
+    endif
+endonce

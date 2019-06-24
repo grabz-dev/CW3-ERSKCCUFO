@@ -1,0 +1,752 @@
+# UfoUnit.crpl
+# Created on: 6/7/2019 3:33:37 PM
+# ------------------------------------------
+
+# config
+$BeamHealth:5.0
+$SniperHealth:300.0
+
+# set by creator
+$CreatedBy:-1 # creatorUID
+$Speed:2.0 # movement speed, pixels per frame
+$TargetOnly:"" # only target slected unit, leave blank for all targets
+$TargetClosest:0 # 1 = target closest unit, 0 = target random unit
+
+# images
+$ImageUnit:"Custom21"
+$ImageRing:"Custom22"
+$ImageRingFront:"Custom23"
+$ImageOffset:40 # "Custom[offset]" is collector
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    <-CreatedBy -1 eq if
+        Self 0 Destroy # delete on recompile
+        return
+    endif
+
+    @DefineConstants
+
+    "ammo" @CreateSlave ->AmmoSlave
+    "health" @CreateSlave ->HealthSlave
+
+    @Awake
+    @CreateImages
+
+    Self CONST_HEALTH <-SniperHealth SetUnitAttribute
+    
+    ### DEVELOPMENT ###
+    #Self CONST_COORDX CurrentX 6 add SetUnitAttribute
+    #<-STATE_BEAM_DOWN ->State
+    #"Collector" CurrentCoords CreateUnit dup CONST_ISBUILDING 0 SetUnitAttribute ->Target
+    #"CRPLCORE" CurrentCoords CreateUnit dup "CloudMaker.crpl" AddScriptToUnit ->Target
+    ### DEVELOPMENT ###
+    
+    <-TargetOnly "CRPLCORE:" StartsWith if
+        <-TargetOnly 9 <-TargetOnly StringLength 9 sub SubString ->TargetScript
+    endif
+
+    @EnterRising
+endonce
+
+# dispatch action
+<-State <-STATE_CRASHED lt if
+    <-State <-STATE_MOVING lt if
+        <-State <-STATE_RISING eq if
+            @ProcessRising
+        else
+            @ProcessSearching
+        endif
+    else
+        <-State <-STATE_MOVING eq if
+            @ProcessMoving
+        else
+            @ProcessFalling
+        endif
+    endif
+else
+    <-State <-STATE_BEAM_UP lt if
+        <-State <-STATE_CRASHED eq if
+            @ProcessCrashed
+        else
+            @ProcessBeamDown
+        endif
+    else
+        <-State <-STATE_BEAM_UP eq if
+            @ProcessBeamUp
+        else
+            @ProcessRetreat
+        endif
+    endif
+endif
+
+#<-State <-STATE_RISING eq if
+#    @ProcessRising
+#else <-State <-STATE_SEARCHING eq if
+#    @ProcessSearching
+#else <-State <-STATE_MOVING eq if
+#    @ProcessMoving
+#else <-State <-STATE_FALLING eq if
+#    @ProcessFalling
+#else <-State <-STATE_CRASHED eq if
+#    @ProcessCrashed
+#else <-State <-STATE_BEAM_DOWN eq if
+#    @ProcessBeamDown
+#else <-State <-STATE_BEAM_UP eq if
+#    @ProcessBeamUp
+#else <-State <-STATE_RETREAT eq if
+#    @ProcessRetreat
+#else
+#    "INVALID STATE" Trace
+#endif
+#endif
+#endif
+#endif
+#endif
+#endif
+#endif
+#endif
+
+# move slaves
+CurrentPixelCoords ->cy ->cx
+<-HealthSlave CONST_PIXELCOORDX <-cx       SetUnitAttribute
+<-HealthSlave CONST_PIXELCOORDY <-cy 4 sub SetUnitAttribute
+<-AmmoSlave   CONST_PIXELCOORDX <-cx       SetUnitAttribute
+<-AmmoSlave   CONST_PIXELCOORDY <-cy 4 add SetUnitAttribute
+<-HealthSlave CONST_HEALTH SetUnitAttribute(Self CONST_HEALTH GetUnitAttribute)
+<-AmmoSlave   CONST_AMMO SetUnitAttribute(Self CONST_AMMO GetUnitAttribute)
+
+# debug when in trouble
+StackSize 0 gt if
+    "NONEMPTY STACK!" Trace
+    TraceStack
+endif
+
+:DefineConstants
+    10 ->RINGS
+    60.0 ->Elevation # for unit offset
+    15.0 ->ShadowX # for the shadow
+    -30.0 ->ShadowY # for the shadow
+
+    0 ->STATE_RISING # rising from base
+    1 ->STATE_SEARCHING # searchign for target if one isn't immidietely found
+    2 ->STATE_MOVING # moving to target
+    3 ->STATE_FALLING # falling on the ground after being hit
+    4 ->STATE_CRASHED # crashed on ground, recharging shields
+    5 ->STATE_BEAM_DOWN # beam is moving down from UFO
+    6 ->STATE_BEAM_UP # ufo is sucking the unit in
+    7 ->STATE_RETREAT # retreat somewhere off-map
+
+    "Custom" <-ImageOffset 00 add concat ->IMG_COLLECTOR
+    "Custom" <-ImageOffset 01 add concat ->IMG_RELAY
+    "Custom" <-ImageOffset 02 add concat ->IMG_REACTOR
+    "Custom" <-ImageOffset 03 add concat ->IMG_SHIELD
+    "Custom" <-ImageOffset 04 add concat ->IMG_OREMINE
+    "Custom" <-ImageOffset 05 add concat ->IMG_SIPHON
+    "Custom" <-ImageOffset 06 add concat ->IMG_TERP
+    "Custom" <-ImageOffset 07 add concat ->IMG_GUPPY
+
+    "Custom" <-ImageOffset 08 add concat ->IMG_PULSECANNON
+    "Custom" <-ImageOffset 09 add concat ->IMG_MORTAR
+    "Custom" <-ImageOffset 10 add concat ->IMG_STRAFER
+    "Custom" <-ImageOffset 11 add concat ->IMG_BOMBER
+    "Custom" <-ImageOffset 12 add concat ->IMG_NULLIFIER
+    "Custom" <-ImageOffset 13 add concat ->IMG_SPRAYER
+    "Custom" <-ImageOffset 14 add concat ->IMG_BEAM
+    "Custom" <-ImageOffset 15 add concat ->IMG_SNIPER
+
+    "Custom" <-ImageOffset 16 add concat ->IMG_BERTHA
+    "Custom" <-ImageOffset 17 add concat ->IMG_GUPPYAIR
+    "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
+    "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
+
+    12 ->IMAGE_SIZE
+    0 ->IMAGE_NAME
+    1 ->IMAGE_SCALEX
+    2 ->IMAGE_SCALEY
+    3 ->IMAGE_POSX
+    4 ->IMAGE_POSY
+    5 ->IMAGE_POSZ
+    6 ->IMAGE_COLORR
+    7 ->IMAGE_COLORG
+    8 ->IMAGE_COLORB
+    9 ->IMAGE_COLORA
+    10 ->IMAGE_ROTATION
+    11 ->IMAGE_INTERNAL #internal name
+
+    "Retro7"     ->SOUND_RISING
+    "Weapons2"   ->SOUND_MOVING
+    "Explosion4" ->SOUND_FALLING
+    "Explosion3" ->SOUND_CRASH
+    "Weapons6"   ->SOUND_BEAMDOWN
+    "Weapons5"   ->SOUND_BEAMUP
+    "Weapons4"   ->SOUND_INTAKE
+    "Explosion7" ->SOUND_DESTROYED
+
+:CreateSlave # type - uid
+    ->type
+    "CRPLCORE" CurrentCoords CreateUnit ->slave
+
+    <-slave "DeleteOnRecompile.crpl" AddScriptToUnit
+    <-slave "DeleteOnRecompile.crpl" "KeepAlive" 1 SetScriptVar
+
+    <-slave CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    <-slave CONST_CONNECTABLE 0 SetUnitAttribute
+    <-slave CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    <-slave CONST_CREATEPZ 0 SetUnitAttribute
+    <-slave CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    <-slave CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    <-slave CONST_SNIPERIGNORELOS 0 SetUnitAttribute
+    <-slave CONST_DESTROYMODE 0 SetUnitAttribute
+    <-slave CONST_HEALRATE 0 SetUnitAttribute
+
+    <-type "ammo" eq if
+        <-slave CONST_MAXAMMO <-BeamHealth SetUnitAttribute
+        <-slave CONST_SHOWAMMOBAR 1 SetUnitAttribute
+    endif
+    <-type "health" eq if
+        <-slave CONST_MAXHEALTH <-SniperHealth SetUnitAttribute
+        <-slave CONST_SHOWHEALTHBAR 1 SetUnitAttribute
+    endif
+
+    <-slave return
+
+:InitFlyingState
+    Self CONST_HEALTH GetUnitAttribute ->FlyingHealth
+    Self CONST_AMMO <-BeamHealth SetUnitAttribute
+
+    Self CONST_BEAMTARGET 1 SetUnitAttribute
+    Self CONST_SNIPERTARGET 0 SetUnitAttribute
+
+:ProcessFlyingState # - bool (state chage)
+    <-FlyingHealth sub (Self CONST_HEALTH GetUnitAttribute) ->damage
+    Self CONST_HEALTH <-FlyingHealth SetUnitAttribute
+    Self CONST_AMMO GetUnitAttribute <-damage sub ->shields
+    <-shields 0 lte if
+        Self CONST_AMMO 0 SetUnitAttribute
+        @EnterFalling
+        1 return 
+    else
+        Self CONST_AMMO <-shields SetUnitAttribute
+        0 return
+    endif
+
+:EnterRising
+    Self CONST_PIXELCOORDY GetUnitAttribute ->StartY
+    0 ->riseLevel
+    <-SOUND_RISING PlaySound
+    <-STATE_RISING ->State
+    Self CONST_BEAMTARGET 0 SetUnitAttribute
+    Self CONST_SNIPERTARGET 0 SetUnitAttribute
+    Self "main" 0 SetImageRotation
+    Self "shadow" 0 SetImageRotation
+
+:ProcessRising
+    <-riseLevel 0.25 add ->riseLevel
+    <-riseLevel <-Elevation lt if
+        Self CONST_PIXELCOORDY <-StartY <-riseLevel add SetUnitAttribute
+        Self "shadow" <-riseLevel <-Elevation div <-ShadowX mul SetImagePositionX
+        Self "shadow" <-riseLevel <-Elevation div <-ShadowY mul SetImagePositionY
+    else
+        Self CONST_PIXELCOORDY <-StartY <-Elevation add SetUnitAttribute
+        Self "shadow" <-ShadowX SetImagePositionX
+        Self "shadow" <-ShadowY SetImagePositionY
+        @InitFlyingState # only call this at the end of "process rising"
+        <-OldState <-STATE_RETREAT eq if
+            @EnterRetreat
+        else
+            @EnterSearching
+        endif
+    endif
+
+:EnterSearching
+    RandFloat 0.5 sub ->VX
+    RandFloat 0.5 sub ->VY
+    <-STATE_SEARCHING ->State
+
+:ProcessSearching
+    @ProcessFlyingState if
+        return
+    endif
+
+    <-TargetClosest if
+        # find closest target
+        999999999 ->best
+        -1 ->Target
+        CurrentCoords 1000 1 GetAllUnitsInRange 0 do
+            ->uid
+            <-uid @IsUnitValidTarget if
+                CurrentPixelCoords <-Elevation sub # ground level pixel position
+                <-uid CONST_PIXELCOORDX GetUnitAttribute
+                <-uid CONST_PIXELCOORDY GetUnitAttribute
+                Distance ->dist
+                <-dist <-best lt if
+                    <-uid ->Target
+                    <-dist ->best
+                endif
+            endif
+        loop
+    else
+        # find target by a single walk-though with random selection
+        0 ->count
+        -1 ->Target
+        CurrentCoords 1000 1 GetAllUnitsInRange 0 do
+            ->uid
+            <-uid @IsUnitValidTarget if
+                <-count 1 add ->count
+                0 <-count RandInt eq0 if
+                    <-uid ->Target
+                endif
+            endif
+        loop
+    endif
+
+    # start moving if a target is found
+    <-Target -1 neq if
+        @EnterMoving
+    endif
+
+:EnterMoving
+    <-SOUND_MOVING PlaySound
+    <-STATE_MOVING ->State
+
+:ProcessMoving
+    @ProcessFlyingState if
+        return
+    endif
+
+    # find new target if current one gets destroyed
+    <-Target CONST_ISDESTROYED GetUnitAttribute if
+        <-STATE_SEARCHING ->State
+        return
+    endif
+
+    # current and target position
+    CurrentPixelCoords ->cy ->cx
+    <-Target CONST_PIXELCOORDX GetUnitAttribute ->tx
+    <-Target CONST_PIXELCOORDY GetUnitAttribute <-Elevation add ->ty
+    <-cx <-cy <-tx <-ty Distance ->dist
+
+    <-tx <-cx sub <-dist div <-Speed mul ->VX
+    <-ty <-cy sub <-dist div <-Speed mul ->VY
+    
+    # move to target
+    <-dist <-Speed lte if
+        Self CONST_PIXELCOORDX <-tx SetUnitAttribute
+        Self CONST_PIXELCOORDY <-ty SetUnitAttribute
+        <-Target 0 SetUnitSelectableOverride
+        @EnterBeamDown
+    else
+        Self CONST_PIXELCOORDX <-cx add(<-VX) SetUnitAttribute
+        Self CONST_PIXELCOORDY <-cy add(<-VY) SetUnitAttribute
+    endif
+
+:IsUnitValidTarget # uid - bool
+    ->uid
+    <-uid GetUnitType ->type
+    <-TargetOnly "" neq if 
+        <-TargetOnly "CRPLCORE:" StartsWith if
+            <-uid <-TargetScript ".crpl" concat "Is" <-TargetScript concat GetScriptVar
+            <-uid "TeamFlag.crpl" "IsFriendly" GetScriptVar and return
+        else
+            <-type <-TargetOnly eq
+            <-uid CONST_ISBUILDING GetUnitAttribute not
+            and return
+        endif
+    else
+        "IMG_" <-type concat -?! if
+            <-uid CONST_ISBUILDING GetUnitAttribute not return
+        endif
+        <-uid "TeamFlag.crpl" "IsFriendly" GetScriptVar if
+            1 return
+        endif
+    endif
+    0 return
+
+:EnterFalling
+    <-SOUND_FALLING PlaySound
+
+    <-VX 2.0 div ->VX
+    <-VY 2.0 div ->VY
+
+    Self CONST_BEAMTARGET 0 SetUnitAttribute
+    Self CONST_SNIPERTARGET 0 SetUnitAttribute
+
+    <-Elevation ->riseLevel
+    0.1 ->fallSpeed
+    0 ->wobble
+
+    <-State ->OldState
+    <-STATE_FALLING ->State
+
+:ProcessFalling
+    <-fallSpeed 0.01 add ->fallSpeed
+    <-riseLevel <-fallSpeed sub ->riseLevel
+    Self CONST_PIXELCOORDX dup2 SetUnitAttribute(
+        GetUnitAttribute <-VX add
+    )
+    Self CONST_PIXELCOORDY dup2 SetUnitAttribute(
+        GetUnitAttribute <-VY add
+        <-fallSpeed sub # falling down
+    )
+
+    <-wobble 0.2 RandFloat 0.05 mul add add ->wobble
+    Self "main" <-wobble sin 0.25 mul SetImageRotation
+    Self "shadow" <-wobble sin 0.25 mul SetImageRotation
+
+    <-riseLevel 0 gt if
+        Self "shadow" <-riseLevel <-Elevation div <-ShadowX mul SetImagePositionX
+        Self "shadow" <-riseLevel <-Elevation div <-ShadowY mul SetImagePositionY
+    else
+        Self "shadow" 0 SetImagePositionX
+        Self "shadow" 0 SetImagePositionY
+        @EnterCrashed
+    endif
+
+:EnterCrashed
+    <-SOUND_CRASH PlaySound
+    
+    Self CONST_BEAMTARGET 0 SetUnitAttribute
+    Self CONST_SNIPERTARGET 1 SetUnitAttribute
+
+    <-STATE_CRASHED ->State
+
+:ProcessCrashed
+    Self CONST_AMMO GetUnitAttribute 0.03 add ->shields
+    Self CONST_AMMO <-shields SetUnitAttribute
+
+    <-shields <-BeamHealth gte if
+        @EnterRising
+    endif
+
+:EnterBeamDown
+    RandFloat 0.5 sub ->VX
+    RandFloat 0.5 sub ->VY
+    0 ->beamAnim
+    <-SOUND_BEAMDOWN PlaySound
+    <-STATE_BEAM_DOWN ->State
+
+:ProcessBeamDown
+    @ProcessFlyingState if
+        <-RINGS 0 do
+            Self "back" I concat 0 0 SetImageScale
+            Self "front" I concat 0 0 SetImageScale
+        loop
+        return
+    endif
+
+    # lock target unit in place
+    CurrentPixelCoords ->cy ->cx
+    <-Target CONST_PIXELCOORDX <-cx SetUnitAttribute
+    <-Target CONST_PIXELCOORDY <-cy <-Elevation sub SetUnitAttribute
+
+    # animate beam rings
+    <-beamAnim 0.2 add ->beamAnim
+    <-beamAnim ceil <-RINGS min 0 do
+        <-beamAnim I sub <-RINGS div ->relAnim # for offset
+        <-relAnim 0.75 mul 0.25 add ->scaleAnim # for scale
+
+        "back" I concat ->name
+        Self <-name <-relAnim <-Elevation 12 sub mul 12 add neg SetImagePositionY
+        Self <-name <-scaleAnim 1.25 mul dup SetImageScale
+        "front" I concat ->name
+        Self <-name <-relAnim <-Elevation 12 sub mul 12 add neg SetImagePositionY
+        Self <-name <-scaleAnim 1.25 mul dup SetImageScale
+    loop
+
+    #animation done?
+    <-beamAnim <-RINGS 1 sub gte if
+        @EnterBeamUp
+    endif
+
+# Gets around the bug with guppies and works for other units as well
+:SafeDestroy # uid mode -
+    ->SD_Mode
+    ->SD_Uid
+    StackSize ->SD_Size # stack size without the arguments
+    -1 -1 # extra pair of arguments to be consumed if needed
+    <-SD_Uid <-SD_Mode Destroy # this may or may not consume the additinal arguments
+    StackSize <-SD_Size do # remove extra arguments if not consumed by Destroy
+        pop
+    loop
+
+:LoadTargetImages
+    CreateList ->beamUpImages
+    <-Target GetUnitType ->type
+    "IMG_" <-type concat -?! if
+        <-IMAGE_SIZE CreateListStartingSize ->image
+        <-image <-IMAGE_NAME "IMG_" <-type concat <-! SetListElement
+        <-type "BERTHA" eq if
+            <-image <-IMAGE_SCALEX 1.666666 SetListElement
+            <-image <-IMAGE_SCALEY 1.666666 SetListElement
+        else
+            <-image <-IMAGE_SCALEX 1 SetListElement
+            <-image <-IMAGE_SCALEY 1 SetListElement
+        endif
+        <-image <-IMAGE_POSX 0 SetListElement
+        <-image <-IMAGE_POSY 0 SetListElement
+        <-image <-IMAGE_POSZ 0 SetListElement
+        <-image <-IMAGE_COLORR 255 SetListElement
+        <-image <-IMAGE_COLORG 255 SetListElement
+        <-image <-IMAGE_COLORB 255 SetListElement
+        <-image <-IMAGE_COLORA 255 SetListElement
+        <-image <-IMAGE_ROTATION 0 SetListElement
+        <-image <-IMAGE_INTERNAL "unit" SetListElement
+
+        <-beamUpImages <-image AppendToList
+        return
+    endif
+    <-type "CRPLCORE" eq if
+        <-Target "TeamFlag.crpl" "ImageList" GetScriptVar ->list
+        <-list GetListCount eq0 if
+            CreateList ->list
+            <-list "main" AppendToList
+        endif
+        <-list dup GetListCount 0 do
+            dup I GetListElement ->slot
+            <-IMAGE_SIZE CreateListStartingSize ->image
+            <-Target "TeamFlag.crpl" "Image_" <-slot concat GetScriptVar ->name
+            <-name "" concat "0" eq if "Default" ->name endif
+            <-image <-IMAGE_NAME <-name SetListElement
+            <-image <-IMAGE_SCALEX <-Target <-slot 0.420 GetImageScaleX SetListElement
+            <-image <-IMAGE_SCALEY <-Target <-slot 0.420 GetImageScaleY SetListElement
+            <-image <-IMAGE_POSX <-Target <-slot GetImagePositionX SetListElement
+            <-image <-IMAGE_POSY <-Target <-slot GetImagePositionY SetListElement
+            <-image <-IMAGE_POSZ <-Target <-slot GetImagePositionZ SetListElement
+            <-Target <-slot GetImageColor ->colA ->colB ->colG ->colR
+            <-image <-IMAGE_COLORR <-colR SetListElement
+            <-image <-IMAGE_COLORG <-colG SetListElement
+            <-image <-IMAGE_COLORB <-colB SetListElement
+            <-image <-IMAGE_COLORA <-colA SetListElement
+            <-image <-IMAGE_ROTATION <-Target <-slot GetImageRotation SetListElement
+            <-image <-IMAGE_INTERNAL "unit" I concat SetListElement
+            <-beamUpImages <-image AppendToList
+        loop pop
+        return
+    endif
+
+:CreateTargetImages
+    <-beamUpImages dup GetListCount 0 do
+        dup I GetListElement ->image
+        <-image <-IMAGE_INTERNAL GetListElement ->name
+        Self <-name <-image <-IMAGE_NAME GetListElement SetImage
+        Self <-name 0 0 SetImageScale # do this to hide the image for now
+        Self <-name
+            <-image <-IMAGE_COLORR GetListElement
+            <-image <-IMAGE_COLORG GetListElement
+            <-image <-IMAGE_COLORB GetListElement
+            <-image <-IMAGE_COLORA GetListElement
+            SetImageColor # color will stay the same
+        Self <-name
+            <-image <-IMAGE_POSZ GetListElement # get the image Z offset
+            atan 3.14159265359 div 0.5 add # map to range (0, 1)
+            -77 add # map to range (-77, -76)
+            SetImagePositionZ
+        Self <-name <-image <-IMAGE_ROTATION GetListElement SetImageRotation
+    loop pop
+
+:RenderTargetImages # progress
+    ->p # offset
+    <-p 0.75 mul 0.25 add ->s # scale
+    <-beamUpImages dup GetListCount 0 do
+        dup I GetListElement ->image
+        <-image <-IMAGE_INTERNAL GetListElement ->name
+        Self <-name <-image <-IMAGE_SCALEX GetListElement <-s mul SetImageScaleX
+        Self <-name <-image <-IMAGE_SCALEY GetListElement <-s mul SetImageScaleY
+        Self <-name <-image <-IMAGE_POSX GetListElement <-p mul SetImagePositionX
+        Self <-name <-image <-IMAGE_POSY GetListElement <-p mul sub(<-Elevation 12 sub <-p mul 12 add) SetImagePositionY
+    loop pop
+
+:DiscardTargetImages
+    <-beamUpImages dup GetListCount 0 do
+        dup I GetListElement ->image
+        Self <-image <-IMAGE_INTERNAL GetListElement "none" SetImage
+    loop pop
+
+:EnterBeamUp
+    @LoadTargetImages
+    @CreateTargetImages
+    
+    # save upducted unit
+    <-Target GetUnitType "AIR" "" StringReplace ->AbductedType
+    <-Target GetUnitType "CRPLCORE" eq if
+        <-Target CONST_CREATEPZ 0 SetUnitAttribute
+        <-Target "TeamFlag.crpl" "ScriptName" GetScriptVar ".crpl" "" StringReplace ".crpl" concat ->AbductedScript
+        <-Target "TeamFlag.crpl" "SavedVariables" GetScriptVar ->AbductedVars
+        CreateList ->AbductedVals
+        <-AbductedVars GetListCount 0 do
+            <-AbductedVals <-Target <-AbductedScript <-AbductedVars I GetListElement GetScriptVar AppendToList
+        loop
+    endif
+    <-Target 0 @SafeDestroy
+
+    <-RINGS 2 mul ->beamAnim
+    <-SOUND_BEAMUP PlaySound
+    <-STATE_BEAM_UP ->State
+
+:ProcessBeamUp
+    @ProcessFlyingState if
+        <-RINGS 0 do
+            Self "back" I concat 0 0 SetImageScale
+            Self "front" I concat 0 0 SetImageScale
+        loop
+        @DiscardTargetImages
+        CurrentPixelCoords <-Elevation sub PixelToCell @RebuildUnit
+        return
+    endif
+
+    # here, "beam anim" is the offset for the rings. Once it reaches 0, the unit will be fully sucked it
+    # so at 1X rings new rings should stop being created
+    <-beamAnim 0.1 sub ->beamAnim
+    <-RINGS 0 do
+        <-beamAnim dup dup floor sub 1 sub <-RINGS add min ->effectiveAnim
+        #1 sub(<-beamAnim I sub <-RINGS div) 0 max ->relAnim
+        #<-beamAnim ->effectiveAnim
+        <-effectiveAnim I sub <-RINGS div ->effectiveAnim # for offset
+        <-effectiveAnim 0.75 mul 0.25 add ->scaleAnim # for scale
+
+        "back" I concat ->name
+        Self <-name <-effectiveAnim <-Elevation 12 sub mul 12 add neg SetImagePositionY
+        Self <-name <-scaleAnim 1.25 mul dup SetImageScale
+        Self <-name 255 255 255
+            <-effectiveAnim 0 gte
+            1 <-effectiveAnim sub <-RINGS mul 0 max
+            min 255 mul SetImageColor
+
+        "front" I concat ->name
+        Self <-name <-effectiveAnim <-Elevation 12 sub mul 12 add neg SetImagePositionY
+        Self <-name <-scaleAnim 1.25 mul dup SetImageScale
+        Self <-name 255 255 255
+            <-effectiveAnim 0 gte
+            1 <-effectiveAnim sub <-RINGS mul 0 max
+            min 255 mul SetImageColor
+    loop
+    <-beamAnim <-RINGS 2 mul div @RenderTargetImages
+
+    <-beamAnim 0 lte if
+        @DiscardTargetImages
+        @EnterRetreat
+    endif
+
+:EnterRetreat
+    # calculate retreat
+    MapWidth 4 mul ->centerX
+    MapHeight 4 mul ->centerY
+    CurrentPixelCoords <-Elevation sub ->currentY ->currentX
+    <-currentX <-centerX sub abs MapWidth  4 mul div
+    <-currentY <-centerY sub abs MapHeight 4 mul div
+    max ->distRel
+    1 <-distRel sub 0.75 mul 0.25 add ->distRel1
+    <-currentY <-centerY sub <-currentX <-centerX sub atan2 ->primaryAngle
+    RandFloat 0.5 sub 6.28318530718 mul <-distRel1 mul <-primaryAngle add ->finalAngle
+    <-centerX MapWidth  12 mul <-finalAngle cos mul add ->targetX
+    <-centerY MapHeight 12 mul <-finalAngle sin mul add <-Elevation add ->targetY
+
+    <-SOUND_INTAKE PlaySound
+    <-STATE_RETREAT ->State
+
+:ProcessRetreat
+    @ProcessFlyingState if
+        return
+    endif
+
+    # current and target position
+    CurrentPixelCoords ->cy ->cx
+    <-cx <-cy <-targetX <-targetY Distance ->dist
+
+    # movement speed
+    <-targetX <-cx sub <-dist div <-Speed mul ->VX
+    <-targetY <-cy sub <-dist div <-Speed mul ->VY
+    
+    # move to target
+    <-dist <-Speed lte if
+        Self 0 Destroy # finally at destination
+    else
+        Self CONST_PIXELCOORDX <-cx add(<-VX) SetUnitAttribute
+        Self CONST_PIXELCOORDY <-cy add(<-VY) SetUnitAttribute
+    endif
+
+:RebuildUnit # x y -
+    ->y ->x
+    -?AbductedType <-AbductedType "" neq and if
+        <-x 0 gte <-x MapWidth lt <-y 0 gte <-y MapHeight lt and and and if
+            <-AbductedType <-x <-y CreateUnit ->uid
+            <-AbductedType "CRPLCORE" eq if
+                <-uid <-AbductedScript AddScriptToUnit
+                <-AbductedVars GetListCount 0 do
+                    <-uid <-AbductedScript <-AbductedVars I GetListElement <-AbductedVals I GetListElement SetScriptVar
+                loop
+            else
+                <-uid CONST_ISBUILDING 0 SetUnitAttribute
+                <-uid CONST_HEALTH SetUnitAttribute(<-uid CONST_MAXHEALTH GetUnitAttribute)
+            endif
+        endif
+        "" ->AbductedType
+    endif
+
+:CreateImages
+    # layer strategy:
+    # - 80 main UFO image
+    # - 79-78 front rings
+    # - 77-76 sucked unit images
+    # - 75-74 back rings
+    # - 10 shadow
+
+    Self "main" <-ImageUnit SetImage
+    Self "main" -80 SetImagePositionZ
+    Self "main" 1.35 dup SetImageScale
+
+    Self "shadow" <-ImageUnit SetImage
+    Self "shadow" -10 SetImagePositionZ
+    Self "shadow" 1.35 dup SetImageScale
+    Self "shadow" 0 0 0 128 SetImageColor
+
+    <-RINGS 0 do
+        "back" I concat ->name
+        Self <-name <-ImageRing SetImage
+        Self <-name 0 0 SetImageScale
+        Self <-name -74 I -0.01 mul add SetImagePositionZ
+
+        "front" I concat ->name
+        Self <-name <-ImageRingFront SetImage
+        Self <-name 0 0 SetImageScale
+        Self <-name -78 I -0.01 mul add SetImagePositionZ
+    loop
+
+:Awake
+    Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_SNIPERIGNORELOS 0 SetUnitAttribute
+    SELF CONST_DESTROYMODE 1 SetUnitAttribute
+    Self CONST_HEALRATE 0 SetUnitAttribute
+    Self CONST_MAXHEALTH <-SniperHealth SetUnitAttribute
+    Self CONST_MAXAMMO <-BeamHealth SetUnitAttribute
+    Self CONST_SHOWAMMOBAR 0 SetUnitAttribute
+    Self CONST_SHOWHEALTHBAR 0 SetUnitAttribute
+
+    <-AmmoSlave CONST_SHOWAMMOBAR 1 SetUnitAttribute
+    <-HealthSlave CONST_SHOWHEALTHBAR 1 SetUnitAttribute
+
+    <-AmmoSlave "main" "none" SetImage
+    <-HealthSlave "main" "none" SetImage
+    
+    0 OperateWhilePaused
+
+:Destroyed
+    <-CreatedBy "UfoMaker.crpl" "Busy" 0 SetScriptVar
+    <-HealthSlave 0 Destroy
+    <-AmmoSlave 0 Destroy
+
+    <-State <-STATE_RETREAT neq if
+        <-SOUND_DESTROYED PlaySound
+        # rebuild abducted unit
+        CurrentCoords @RebuildUnit
+    endif
+

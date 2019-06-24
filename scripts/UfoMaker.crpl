@@ -1,0 +1,196 @@
+# UfoMaker.crpl
+# Created on: 6/7/2019 3:33:16 PM
+# ------------------------------------------
+
+# Ufo maker settings
+$InitialDelay:60 # in seconds
+$ProductionDelay:30 # UFO making delay, counter starts after the previous UFO disapears off-map
+
+# Ufo settings
+$Speed:2.0 # movement speed, pixels per frame
+$BeamHealth:5.0 # "shields" while in the air
+$SniperHealth:300.0 # HP while on the ground
+
+$TargetOnly:"" # only target slected unit, leave blank for all targets
+$TargetClosest:0 # 1 = target closest unit, 0 = target random unit
+
+# Graphics
+$StarPoints:5
+$StarOffset:1
+
+# Images
+$ImageMain:"Custom20"
+$ImageLine:"Custom1pp"
+
+$ImageClosest:"Custom24"
+$ImageRandom:"Custom25"
+$ImageRainmaker:"Custom26" # hand-write custom target images
+$ImageOffset:40 # "Custom[offset]" is collector
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    @Awake
+    @DefineConstants
+    @CreateImages
+
+    0 ->Busy
+    <-InitialDelay 30 mul ->nextUfo
+    
+    # team flag used for discovery by clouds
+    Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
+        Self "TeamFlag.crpl" AddScriptToUnit
+    endif
+    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+endonce
+
+<-Busy not if
+    <-nextUfo 0 lte if
+        @CreateUFO
+        <-ProductionDelay 30 mul ->nextUfo
+    else
+        <-nextUfo 1 sub ->nextUfo
+    endif
+endif
+
+@AnimateImages
+@SetText
+
+StackSize 0 gt if
+    "NONEMPTY STACK!" Trace
+    TraceStack
+endif
+
+:DefineConstants
+    "Custom" <-ImageOffset 00 add concat ->IMG_COLLECTOR
+    "Custom" <-ImageOffset 01 add concat ->IMG_RELAY
+    "Custom" <-ImageOffset 02 add concat ->IMG_REACTOR
+    "Custom" <-ImageOffset 03 add concat ->IMG_SHIELD
+    "Custom" <-ImageOffset 04 add concat ->IMG_OREMINE
+    "Custom" <-ImageOffset 05 add concat ->IMG_SIPHON
+    "Custom" <-ImageOffset 06 add concat ->IMG_TERP
+    "Custom" <-ImageOffset 07 add concat ->IMG_GUPPY
+
+    "Custom" <-ImageOffset 08 add concat ->IMG_PULSECANNON
+    "Custom" <-ImageOffset 09 add concat ->IMG_MORTAR
+    "Custom" <-ImageOffset 10 add concat ->IMG_STRAFER
+    "Custom" <-ImageOffset 11 add concat ->IMG_BOMBER
+    "Custom" <-ImageOffset 12 add concat ->IMG_NULLIFIER
+    "Custom" <-ImageOffset 13 add concat ->IMG_SPRAYER
+    "Custom" <-ImageOffset 14 add concat ->IMG_BEAM
+    "Custom" <-ImageOffset 15 add concat ->IMG_SNIPER
+
+    "Custom" <-ImageOffset 16 add concat ->IMG_BERTHA
+    "Custom" <-ImageOffset 17 add concat ->IMG_GUPPYAIR
+    "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
+    "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
+    
+    <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
+
+:CreateUFO
+    "CRPLCORE" CurrentCoords CreateUnit ->ufo
+    <-ufo "UfoUnit.crpl" AddScriptToUnit
+    <-ufo "UfoUnit.crpl" "CreatedBy" Self SetScriptVar
+    <-ufo "UfoUnit.crpl" "Speed" <-Speed SetScriptVar
+    <-ufo "UfoUnit.crpl" "BeamHealth" <-BeamHealth SetScriptVar
+    <-ufo "UfoUnit.crpl" "SniperHealth" <-SniperHealth SetScriptVar
+    <-ufo "UfoUnit.crpl" "TargetOnly" <-TargetOnly SetScriptVar
+    <-ufo "UfoUnit.crpl" "TargetClosest" <-TargetClosest SetScriptVar
+    1 ->Busy
+
+:SetText
+    <-Busy if
+        "♃♄⚵ ♅♆ ♇☦" SetText
+        256 0 64 256 SetTextColor
+    else
+        "♆♃♇ " <-nextUfo 30.0 div 0 Round " ♄♃" concat concat SetText
+        0 256 64 256 SetTextColor
+    endif
+
+:AnimateImages
+    6 ->shortR
+    13 ->longR
+
+    GetGameTimeFrames -120.0 div ->shortA
+    GetGameTimeFrames 40.0 div ->longA
+
+    <-StarPoints 0 do
+        # compute long point
+        I <-starAngle mul <-longA add dup
+            cos <-longR mul ->x2
+            sin <-longR mul ->y2
+
+        # compute first short point
+        I <-starAngle mul <-shortA add dup
+            cos <-shortR mul ->x1
+            sin <-shortR mul ->y1
+        # draw first line
+        "line" I 2 mul concat ->iname
+        @DrawLine
+
+        # compute second short point
+        I <-StarOffset add <-starAngle mul <-shortA add dup
+            cos <-shortR mul ->x1
+            sin <-shortR mul ->y1
+        # draw second line
+        "line" I 2 mul 1 add concat ->iname
+        @DrawLine
+    loop
+
+:DrawLine
+    Self <-iname
+        <-x1 <-x2 add 2.0 div
+        <-y1 <-y2 add 2.0 div
+        -0.01 SetImagePosition
+    Self <-iname
+        <-x1 <-y1 <-x2 <-y2 Distance 24.0 div
+        0.06666 SetImageScale
+    Self <-iname
+        <-y2 <-y1 sub
+        <-x2 <-x1 sub
+        atan2 SetImageRotation
+
+:CreateImages
+    Self RemoveImages
+
+    Self "main" <-ImageMain SetImage
+    Self "main" 5 3.0 div dup SetImageScale
+
+    <-StarPoints 2 mul 0 do
+        "line" I concat ->iname
+        Self <-iname <-ImageLine SetImage
+        Self <-iname 192 64 16 255 SetImageColor
+        #Self <-iname I 25 mul 256 I 25 mul sub 32 255 SetImageColor
+    loop
+    6.28318530718 <-StarPoints div ->starAngle
+
+    <-TargetClosest if
+        Self "target" <-ImageClosest SetImage
+    else
+        Self "target" <-ImageRandom SetImage
+    endif
+    Self "target" 20 -20 -0.01 SetImagePosition
+    Self "target" 0.666666 dup SetImageScale
+    
+    "IMG_" <-TargetOnly concat -?! if
+        Self "only" "IMG_" <-TargetOnly concat <-! SetImage
+        Self "only" -20 -20 -0.01 SetImagePosition
+        Self "only" 0.666666 dup SetImageScale
+    else
+        "" ->TargetOnly
+    endif
+
+:Awake
+    Self CONST_TAKEMAPSPACE 1 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    Self CONST_CREATEPZ 1 SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY 1 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 1 SetUnitAttribute
+    Self CONST_CELLWIDTH 5 SetUnitAttribute
+    Self CONST_CELLHEIGHT 5 SetUnitAttribute
+
+    0.5 SetTextSize
+    24 SetTextY

@@ -1,0 +1,16 @@
+# TeamFlag.crpl
+# Created on: 10/19/2018 9:38:28 PM
+# ------------------------------------------
+
+# discovery and team settings
+$TeamFlagAttached:1
+$IsEnemy:0
+$IsFriendly:0
+
+# rendering images
+#$ImageList:[] # list of image names
+#$Image[name]:"" # image name to image name (kek)
+
+# values for replicatig
+$ScriptName:""
+#$SavedVariables:[]
