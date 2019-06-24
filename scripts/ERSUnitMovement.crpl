@@ -1,0 +1,95 @@
+# ERS.crpl
+# Created on: 6/23/2019 2:37:12 PM
+# ------------------------------------------
+$Speed:2.0
+$Waypoint1:""
+$Waypoint2:""
+$Waypoint3:""
+$Waypoint4:""
+$Waypoint5:""
+$Waypoint6:""
+$Waypoint7:""
+$Waypoint8:""
+$Waypoint9:""
+$Waypoint10:""
+$Waypoint11:""
+$Waypoint12:""
+$Waypoint13:""
+$Waypoint14:""
+$Waypoint15:""
+$Waypoint16:""
+$Waypoint17:""
+$Waypoint18:""
+$Waypoint19:""
+$Waypoint20:""
+
+once
+    0.0 ->G_fRotation
+    @awake
+
+    <-Speed 8.0 mul 30.0 div ->fSpeedPerCell
+endonce
+
+Self "ERSUnitBase.crpl" "G_sState" GetScriptVar ->G_sState
+
+<-G_sState "ACTIVE" eq if 
+    <-G_iLastWaypoint 0 gt if
+        GetQueuedMoveCount eq0 if
+            <-G_iLastWaypoint 1 add 1 do
+                "Waypoint" I concat "x" concat <-! "Waypoint" I concat "y" concat <-! <-fSpeedPerCell QueueMove
+            loop
+        endif
+
+        CurrentPixelCoords ->fPixelY ->fPixelX
+
+        <-G_fRotation <-fPixelX <-fLastPixelX sub 10.0 div sub ->G_fRotation
+
+        <-G_fRotation PI 2 mul gt if
+            <-G_fRotation PI 2 mul sub ->G_fRotation
+        endif
+        <-G_fRotation PI -2 mul lt if
+            <-G_fRotation PI 2 mul add ->G_fRotation
+        endif
+
+        Self "wheels" <-G_fRotation SetImageRotation
+
+        <-fPixelX <-fPixelY ->fLastPixelY ->fLastPixelX
+    endif
+endif
+
+:awake
+    FALSE OperateWhilePaused
+    -?IDENTIFIER_ERSUNITMOVEMENT not if
+        #Convert waypoints from strings to coords
+        1 ->iI
+        while TRUE repeat
+            "Waypoint" <-iI concat <-! ->s
+            <-s StringLength eq0 if
+                <-iI 1 sub ->G_iLastWaypoint
+                break
+            endif
+
+            <-s @GetCoordsFromWaypoint ->iY ->iX
+
+            <-iX "Waypoint" <-iI concat "x" concat ->!
+            <-iY "Waypoint" <-iI concat "y" concat ->!
+            
+            <-iI 1 add ->iI
+        endwhile
+    endif
+    TRUE ->IDENTIFIER_ERSUNITMOVEMENT
+
+    <-G_iLastWaypoint eq0 if
+        Self "wheels" "NONE" SetImage
+    else
+        Self "wheels" "Custom2_256" SetImage
+        Self "wheels" 1.15 dup SetImageScale
+        Self "wheels" -0.1 SetImagePositionZ
+    endif
+:GetWaypointFromCoords
+    swap "," concat swap concat
+:GetCoordsFromWaypoint
+    "," Split ->l
+    <-l GetListCount 0 do
+        <-l I GetListElement " " "" StringReplace asint
+    loop

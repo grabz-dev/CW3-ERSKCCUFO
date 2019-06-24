@@ -1,0 +1,41 @@
+# ERSManager.crpl
+# Created on: 6/17/2019 12:41:14 PM
+# ------------------------------------------
+once
+   @awake
+endonce
+
+GetMouseCell ->iCellY ->iCellX
+<-iERSUID -1 neq if
+    <-iERSUID "ERSUnitBase.crpl" "G_bHoveredOver" FALSE SetScriptVar
+endif
+
+-1 ->iERSUID
+
+<-iCellX <-iCellY 1 TRUE GetAllUnitsInRange 0 do
+    ->iUID
+
+    <-iUID "ERSUnitBase.crpl" "IDENTIFIER_ERSUNITBASE" GetScriptVar if
+        <-iUID ->iERSUID
+    endif
+loop
+
+<-iERSUID -1 neq if
+    <-iERSUID "ERSUnitBase.crpl" "G_bHoveredOver" TRUE SetScriptVar
+endif
+
+:awake
+    TRUE OperateWhilePaused
+    TRUE ->IDENTIFIER_ERSMANAGER
+
+    Self CONST_TAKEMAPSPACE         FALSE SetUnitAttribute
+    Self CONST_CREATEPZ             FALSE SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS    FALSE SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY     FALSE SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES     FALSE SetUnitAttribute
+    Self CONST_DESTROYMODE 0 SetUnitAttribute
+
+    Self CONST_COORDX -2 SetUnitAttribute
+    Self CONST_COORDY -2 SetUnitAttribute
+
+    Self "main" "NONE" SetImage

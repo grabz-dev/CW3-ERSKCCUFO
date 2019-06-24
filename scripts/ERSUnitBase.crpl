@@ -1,0 +1,399 @@
+# ERS.crpl
+# Created on: 6/16/2019 3:15:09 PM
+# ------------------------------------------
+
+$Power:1.0
+$Radius:32.0
+#Decay per minute.
+$Decay:0.9
+#Delay in frames.
+$StartDelay:600
+$Health:1.0
+#0 - AIR and GROUND.
+#1 - GROUND.
+#2 - AIR.
+$Type:0
+#0 - Strength is always 'Power'
+#1 - Strength is 'Power * 2' at core, 'Power' in the middle and 0 on the outer edge.
+$StrengthBasedOnRange:0
+#The unit is hurt by AC - 1.0 health is removed every minute.
+$HurtByAntiCreeper:0
+
+
+once
+    #The Rule:
+    #Anything the player can control that can be moved will be damaged.
+
+    1 ->COMMANDNODE
+    
+    #1 ->COLLECTOR
+    #1 ->RELAY
+    #1 ->REACTOR
+    #1 ->OREMINE
+    #1 ->SIPHON
+    1 ->TERP
+    1 ->GUPPY
+    1 ->GUPPYAIR
+    1 ->SHIELD
+
+    1 ->PULSECANNON
+    1 ->MORTAR
+    1 ->STRAFER
+    1 ->STRAFERAIR
+    1 ->BOMBER
+    1 ->BOMBERAIR
+    1 ->SPRAYER
+    #1 ->NULLIFIER
+    1 ->BEAM
+    1 ->SNIPER
+
+    1 ->FORGE
+    1 ->BERTHA
+    #1 ->THOR
+
+    255 ->iAlphaHaloSelected
+    115 ->iAlphaHaloNotSelected
+
+    Self CONST_MAXHEALTH <-Health SetUnitAttribute
+    Self CONST_HEALTH <-Health SetUnitAttribute
+    Self CONST_HEALRATE 0 SetUnitAttribute
+
+    CreateList ->G_lCurrentBatchUIDs
+    <-Power 30.0 div 60.0 div ->G_fPowerPerFrame
+    0.0 ->G_fAdjustedPower
+
+    <-Decay 1.0 30 60 mul div pow ->G_fDecayPerFrame
+
+    8 ->G_iLoopsPerFrame
+
+    "AWAKE" ->G_sState
+    @awake
+    "CHARGING" @SetState
+endonce
+
+#UI logic.
+once
+    @HoverPopupTextUpdate
+endonce
+#Update popup when hovered over.
+<-G_bHoveredOver if
+    @HoverPopupTextUpdate
+endif
+#Update popup when hovered/unhovered.
+<-G_bHoveredOver <-G_bHoveredOverLast neq if
+    @HoverPopupTextUpdate
+endif
+
+<-G_sState "ACTIVE" eq if
+    <-G_bHoveredOver <-G_bHoveredOverLast neq if
+        <-G_bHoveredOver if
+            Self "halo" @GetImageColor <-iAlphaHaloSelected SetImageColor
+        else
+            Self "halo" @GetImageColor <-iAlphaHaloNotSelected SetImageColor
+        endif
+    endif
+endif
+<-G_bHoveredOver ->G_bHoveredOverLast
+
+IsPaused if
+    return
+endif
+
+once
+    0 0 9999 TRUE GetAllUnitsInRange 0 do
+        ->iUID
+        <-iUID "ERSManager.crpl" "IDENTIFIER_ERSMANAGER" GetScriptVar if
+            <-iUID ->G_iManagerUID
+        endif
+    loop
+endonce
+<-TIMER0 1 sub 0 max ->TIMER0
+
+<-HurtByAntiCreeper if
+    CurrentCoords GetCreeper 0 lt if
+        Self 1 30.0 div 60.0 div Damage
+    endif
+endif
+
+#If charging, display a delay timer.
+#Once the timer reaches 0, change to active.
+<-G_sState "CHARGING" eq if
+    <-G_bHoveredOver not if
+        <-TIMER0 @GetFormattedTime SetPopupText
+    endif
+    
+    <-TIMER0 eq0 if
+        "ACTIVE" @SetState
+    endif
+#If active, tick every frame. Also change and update the size of the ring.
+else <-G_sState "ACTIVE" eq if
+    @Tick
+
+    <-G_fRadius <-G_fDecayPerFrame mul ->G_fRadius
+    Self "aura" <-G_fRadius 3.0 div 2.0 mul dup SetImageScale
+    Self "halo" <-G_fRadius 3.0 div 2.0 mul dup SetImageScale
+endif endif
+
+:awake
+    TRUE OperateWhilePaused
+
+"
+"   ->NL
+
+    TRUE ->IDENTIFIER_ERSUNITBASE
+
+    Self CONST_SUPPORTSDIGITALIS FALSE SetUnitAttribute
+
+    #List of type names for the popup text.
+    CreateList ->G_l2dTypeNames
+    <-G_l2dTypeNames "ENCOMPASSING RADIATION" AppendToList     #0
+    <-G_l2dTypeNames "GROUND RADIATION"       AppendToList     #1
+    <-G_l2dTypeNames "AIR RADIATION"          AppendToList     #2
+
+    #Set main color to a brighter version of the color of the ring itself.
+    <-HurtByAntiCreeper if
+        <-StrengthBasedOnRange if
+            Self "main" "Custom5" SetImage
+        else
+            Self "main" "Custom1" SetImage
+        endif
+    else
+        <-StrengthBasedOnRange if
+            Self "main" "Custom4" SetImage
+        else
+            Self "main" "Custom0" SetImage
+        endif
+    endif
+    
+    Self "main" @GetImageColor @BrightenColor 255 SetImageColor
+
+    #Set icons based on type.
+    <-Type 0 eq if
+        Self "icon_1" "Custom0_128" SetImage
+        Self "icon_2" "Custom1_128" SetImage
+    else <-Type 1 eq if
+        Self "icon_1" "Custom0_128" SetImage
+        Self "icon_2" "NONE" SetImage
+    else <-Type 2 eq if
+        Self "icon_1" "NONE" SetImage
+        Self "icon_2" "Custom1_128" SetImage
+    else
+        Self "icon_1" "NONE" SetImage
+        Self "icon_2" "NONE" SetImage
+    endif endif endif
+
+    #Position icons.
+    Self "icon_1" 0.5 dup SetImageScale
+    Self "icon_2" 0.5 dup SetImageScale
+
+    Self "icon_1" 8 -8 -0.2 SetImagePosition
+    Self "icon_2" 8 4 -0.2 SetImagePosition
+
+    #Fix images on recompile.
+    <-G_sState "AWAKE" eq if
+        Self "aura" "NONE" SetImage
+        Self "halo" "NONE" SetImage
+    endif
+
+    TRUE SetPopupTextAlwaysVisible
+    "" SetPopupText
+:gameloaded
+    @HoverPopupTextUpdate
+:destroyed
+    0.001 @SetHealRateForUnitsInRange
+:SetState
+    ->G_sState
+
+    #If state changed to charging, start the charge timer.
+    <-G_sState "CHARGING" eq if
+        <-StartDelay ->TIMER0
+    #If state changed to active, set the images for the aura/halo and remove the delay timer text.
+    else <-G_sState "ACTIVE" eq if
+        "" SetPopupText
+        Self "aura" "Custom0_256" SetImage
+        
+        <-StrengthBasedOnRange if
+            Self "halo" "Custom5_256" SetImage
+        else
+            Self "halo" "Custom1_256" SetImage
+        endif
+
+        Self "aura" @GetImageColor 75 SetImageColor
+        Self "halo" @GetImageColor <-iAlphaHaloNotSelected SetImageColor
+
+        Self "aura" -70.0 SetImagePositionZ
+        <-Type 1 eq if
+            Self "aura" -1.5 SetImagePositionZ
+        endif
+        Self "halo" 0.5 SetImagePositionZ
+
+        <-Radius ->G_fRadius
+    endif endif
+:UpdatePopupText
+    Self "ERSUnitMovement.crpl" "Waypoint1" GetScriptVar StringLength 0 gt ->bHasWaypoints
+
+    <-G_l2dTypeNames <-Type GetListElement " V1.0"
+    
+    <-StrengthBasedOnRange if
+        <-NL "Power: (0 - " <-Power 2 mul ") / min"
+    else
+        <-NL "Power: " <-Power " / min"
+    endif
+    
+    <-NL "Radius: " <-G_fRadius 2 round " (" <-Radius ")"
+    <-NL "Growth Rate: " <-Decay "x / min"
+    <-HurtByAntiCreeper if
+        <-NL "Health: " <-Health " (" <-Health 600.0 mul ceil 10.0 div " seconds in AC)"
+    endif
+    <-bHasWaypoints if
+        <-NL "Speed: " Self "ERSUnitMovement.crpl" "Speed" GetScriptVar " cells/s"
+    endif
+    <-NL "--"
+    <-NL "NULLIFIABLE"
+    <-HurtByAntiCreeper if
+        <-NL "VULNERABLE TO ANTI-CREEPER"
+    endif
+    <-NL <-StrengthBasedOnRange if "RANGE DILUTED" else "RANGE CONSISTENT" endif
+    <-NL <-bHasWaypoints if "MOVES AROUND" endif
+    
+    StackSize 1 sub 0 do concat loop
+    SetPopupText
+:GetFormattedTime
+    ->GFT_iFrames
+
+    <-GFT_iFrames 30.0 div ->GFT_fSeconds
+
+    <-GFT_fSeconds 60 lt if
+        <-GFT_fSeconds ceil "s" concat
+    else 
+        <-GFT_fSeconds 60.0 div floor "m " concat <-GFT_fSeconds 60 mod ceil "s" concat concat
+    endif
+:GetImageColor
+    <-Type 1 eq if #Red if UNITS ON GROUND are damaged. 
+        150 128 0 return
+    endif
+
+    <-Type 2 eq if #Teal if UNITS IN AIR are damaged.
+        0 150 130 return
+    endif
+
+    <-Type eq0 if #Green if ALL UNITS are damaged.
+        75 150 0 return
+        
+    endif
+:BrightenColor
+    ->CRGB_iB
+    ->CRGB_iG
+    ->CRGB_iR
+
+    <-CRGB_iR 70 add 255 min ->CRGB_iR
+    <-CRGB_iG 70 add 255 min ->CRGB_iG
+    <-CRGB_iB 70 add 255 min ->CRGB_iB
+
+    <-CRGB_iR
+    <-CRGB_iG
+    <-CRGB_iB
+:HoverPopupTextUpdate
+    <-G_bHoveredOver if
+        48 SetPopupTextY
+        0 SetPopupTextX
+        @UpdatePopupText
+    else
+        16 SetPopupTextY
+        0 SetPopupTextX
+        <-G_sState "CHARGING" eq if
+            <-TIMER0 @GetFormattedTime SetPopupText
+        else
+            "" SetPopupText
+        endif
+    endif
+:Tick
+    #If no more units left in the list of units in range, get more units.
+    <-G_lCurrentBatchUIDs GetListCount eq0 if
+        #Look through all units that were processed during the finished iteration.
+        #Set all of their heal rates back to normal.
+        0.001 @SetHealRateForUnitsInRange
+        ClearStack
+
+        #Fill the array with eligible units based on type.
+        <-Type eq0 if
+            CurrentCoords <-G_fRadius FALSE GetAllUnitsInRange 0 do
+                ->iUID
+
+                <-iUID GetUnitType <-! if
+                    <-G_lCurrentBatchUIDs <-iUID AppendToList
+                endif
+            loop
+        else <-Type 1 eq if
+            CurrentCoords <-G_fRadius FALSE GetAllUnitsInRange 0 do
+                ->iUID
+
+                <-iUID GetUnitType <-! if
+                    <-iUID CONST_ISLANDED GetUnitAttribute if
+                        <-G_lCurrentBatchUIDs <-iUID AppendToList
+                    endif
+                endif
+            loop
+        else <-Type 2 eq if
+            CurrentCoords <-G_fRadius FALSE GetAllUnitsInRange 0 do
+                ->iUID
+
+                <-iUID GetUnitType <-! if
+                    <-iUID CONST_ISLANDED GetUnitAttribute not if
+                        <-G_lCurrentBatchUIDs <-iUID AppendToList
+                    endif
+                endif
+            loop
+        endif endif endif
+
+        <-G_lCurrentBatchUIDs CopyList ->G_lCurrentBatchAllUIDs
+        0 @SetHealRateForUnitsInRange
+
+        <-G_lCurrentBatchUIDs GetListCount ->G_iTotalUnitsThisIteration
+    endif
+
+    #We process G_iLoopsPerFrame units per frame.
+    #This means we need to raise damage dealt by (damage * ceil(unitsinrange/loops))
+    <-G_iTotalUnitsThisIteration asfloat <-G_iLoopsPerFrame asfloat div ceil asint ->iTicksPerIteration
+
+    #We need to adjust the damage dealt to units.
+    <-G_fPowerPerFrame <-iTicksPerIteration mul ->G_fAdjustedPower
+
+    <-G_lCurrentBatchUIDs GetListCount eq0 if
+        return
+    endif
+
+    <-G_lCurrentBatchUIDs GetListCount 1 sub ->iI
+    <-G_iLoopsPerFrame ->iLoops
+    while <-iI 0 gte repeat
+        <-G_lCurrentBatchUIDs <-iI GetListElement ->iUID
+
+        @TickDamageUnit
+
+        <-G_lCurrentBatchUIDs <-iI RemoveListElement
+
+        <-iLoops 1 sub ->iLoops
+        <-iLoops eq0 if
+            return
+        endif
+
+        <-iI 1 sub ->iI
+    endwhile
+:TickDamageUnit
+    <-StrengthBasedOnRange if 
+        #Multiply damage by 2 on purpose, so that the damage that's been set is dealt in the middle of the range.
+        <-iUID 1.0 <-fDistance <-G_fRadius div sub <-G_fAdjustedPower mul 2.0 mul ->TDU_fDamage
+    else
+        <-iUID <-G_fAdjustedPower ->TDU_fDamage 
+    endif
+
+    <-TDU_fDamage Damage
+
+:SetHealRateForUnitsInRange
+    ->SHR_f
+
+    <-G_lCurrentBatchAllUIDs GetListCount 0 gt if
+        <-G_lCurrentBatchAllUIDs 0 do
+            <-G_lCurrentBatchAllUIDs I GetListElement CONST_HEALRATE <-SHR_f SetUnitAttribute
+        loop
+    endif
