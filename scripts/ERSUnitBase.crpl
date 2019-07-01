@@ -238,7 +238,7 @@ endif endif
 :UpdatePopupText
     Self "ERSUnitMovement.crpl" "Waypoint1" GetScriptVar StringLength 0 gt ->bHasWaypoints
 
-    <-G_l2dTypeNames <-Type GetListElement " V1.0"
+    <-G_l2dTypeNames <-Type GetListElement " V1.1"
     
     <-StrengthBasedOnRange if
         <-NL "Power: (0 - " <-Power 2 mul ") / min"
@@ -374,7 +374,7 @@ endif endif
     while <-iI 0 gte repeat
         <-G_lCurrentBatchUIDs <-iI GetListElement ->iUID
 
-        @TickDamageUnit
+        <-iUID @TickDamageUnit
 
         <-G_lCurrentBatchUIDs <-iI RemoveListElement
 
@@ -386,14 +386,17 @@ endif endif
         <-iI 1 sub ->iI
     endwhile
 :TickDamageUnit
-    <-StrengthBasedOnRange if 
+    ->TDU_iUID
+
+    <-StrengthBasedOnRange if
+        <-TDU_iUID CONST_COORDX GetUnitAttribute <-TDU_iUID CONST_COORDY GetUnitAttribute CurrentCoords Distance ->TDU_fDistance
         #Multiply damage by 2 on purpose, so that the damage that's been set is dealt in the middle of the range.
-        <-iUID 1.0 <-fDistance <-G_fRadius div sub <-G_fAdjustedPower mul 2.0 mul ->TDU_fDamage
+        1.0 <-TDU_fDistance <-G_fRadius div sub <-G_fAdjustedPower mul 2.0 mul ->TDU_fDamage
     else
-        <-iUID <-G_fAdjustedPower ->TDU_fDamage 
+        <-G_fAdjustedPower ->TDU_fDamage 
     endif
 
-    <-TDU_fDamage Damage
+    <-TDU_iUID <-TDU_fDamage Damage
 
 :SetHealRateForUnitsInRange
     ->SHR_f
