@@ -92,3 +92,12 @@ Possible units types for *TargetOnly*:
    
    * COMMANDNODE
    * CRPLCORE:CloudMaker
+
+## Creeper Bomb
+This unit keeps Creeper or AC inside, until it is released when the timer runs out. Connecting the core of the bomb will allow ammo transfer. Each ammo packet delivered to the core will increase the timer (for Creeper) or decrease the timer (for AC).
+
+### CreeperBomb.crpl
+   * *StartDelay* - The amount of time until the bomb is set off.
+   * *Radius* - The radius of the bomb.
+   * *Amt* - The amount of Creeper held inside. Negative values hold Anti-Creeper.
+   * *TimeChangePerPacket* - Can only be positive. The amount of time reduced from (for Creeper) or added to (for AC) the timer, in frames.
