@@ -1,0 +1,15 @@
+#Destroys all unperformanced waypoints if placed - use to cleanup
+
+"WAYPOINT" 1 GetCoresWithVar 0 do
+ ->unit
+ <-unit "Waypoint.crpl" "PERF_IMP" 1 SetScriptVar
+loop
+Self 0 Destroy
+:awake
+	Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute 
+	Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute 
+	Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+	Self CONST_CREATEPZ 0 SetUnitAttribute
+	Self "main" "NONE" SetImage
+	Self "main" 0 0 0 0 SetImageColor
+	Self CONST_TAKEMAPSPACE  0 SetUnitAttribute
