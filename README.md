@@ -75,7 +75,6 @@ Possible units types for *TargetOnly*:
    * SIPHON
    * TERP
    * GUPPY
-   
    * PULSECANNON
    * MORTAR
    * STRAFER
@@ -84,12 +83,10 @@ Possible units types for *TargetOnly*:
    * SPRAYER
    * BEAM
    * SNIPER
-   
    * BERTHA
    * GUPPYAIR
    * STRATERAIR
    * BOMBERAIR
-   
    * COMMANDNODE
    * CRPLCORE:CloudMaker
 
