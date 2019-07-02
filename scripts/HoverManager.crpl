@@ -1,4 +1,4 @@
-# ERSManager.crpl
+# HoverManager.crpl
 # Created on: 6/17/2019 12:41:14 PM
 # ------------------------------------------
 once
@@ -6,27 +6,27 @@ once
 endonce
 
 GetMouseCell ->iCellY ->iCellX
-<-iERSUID -1 neq if
-    <-iERSUID "ERSUnitBase.crpl" "G_bHoveredOver" FALSE SetScriptVar
+<-iHoverUID -1 neq if
+    <-iHoverUID "HoverUnit.crpl" "G_bHoveredOver" FALSE SetScriptVar
 endif
 
--1 ->iERSUID
+-1 ->iHoverUID
 
 <-iCellX <-iCellY 1 TRUE GetAllUnitsInRange 0 do
     ->iUID
 
-    <-iUID "ERSUnitBase.crpl" "IDENTIFIER_ERSUNITBASE" GetScriptVar if
-        <-iUID ->iERSUID
+    <-iUID "HoverUnit.crpl" "IDENTIFIER_HOVERUNIT" GetScriptVar if
+        <-iUID ->iHoverUID
     endif
 loop
 
-<-iERSUID -1 neq if
-    <-iERSUID "ERSUnitBase.crpl" "G_bHoveredOver" TRUE SetScriptVar
+<-iHoverUID -1 neq if
+    <-iHoverUID "HoverUnit.crpl" "G_bHoveredOver" TRUE SetScriptVar
 endif
 
 :awake
     TRUE OperateWhilePaused
-    TRUE ->IDENTIFIER_ERSMANAGER
+    TRUE ->IDENTIFIER_HOVERMANAGER
 
     Self CONST_TAKEMAPSPACE         FALSE SetUnitAttribute
     Self CONST_CREATEPZ             FALSE SetUnitAttribute

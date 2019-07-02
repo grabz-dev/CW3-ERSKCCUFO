@@ -1,0 +1,28 @@
+# UIVersionNumber.crpl
+# Created on: 8/8/2018 10:34:15 AM
+# ------------------------------------------
+once
+	@awake
+endonce
+
+:awake
+	TRUE OperateWhilePaused
+	TRUE ->IDENTIFIER_UIVERSIONNUMBER
+
+	Self CONST_TAKEMAPSPACE 		FALSE SetUnitAttribute
+    Self CONST_CREATEPZ 			FALSE SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 	FALSE SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY 	FALSE SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 	FALSE SetUnitAttribute
+    Self "main" "NONE" SetImage
+
+    TRUE SetScreenMode
+
+    0.6 SetTextSize
+    "MiddleLeft" SetTextAnchor
+    0 SetTextX
+    6 SetTextY
+
+	"CW3-ERSKCCUFO V2.0" SetText
+
+    0 0 SetScreenCoords

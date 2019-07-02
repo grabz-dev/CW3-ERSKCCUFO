@@ -1,0 +1,358 @@
+# CreeperBomb.crpl
+# Created on: 7/2/2019 5:32:23 PM
+# ------------------------------------------
+
+$StartDelay:1900
+$Radius:2
+$Amt:10.0
+$TimeChangePerPacket:45
+
+#Constructor
+once
+    @awake
+
+    Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
+        Self "TeamFlag.crpl" AddScriptToUnit
+    endif
+    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+
+    "AWAKE" ->G_sState
+    @awake
+    "CHARGING" @SetState
+endonce
+
+Self "HoverUnit.crpl" "G_bHoveredOver" GetScriptVar ->G_bHoveredOver
+
+
+
+
+once
+    @HoverPopupTextUpdate
+endonce
+#Update popup when hovered over.
+<-G_bHoveredOver if
+    @HoverPopupTextUpdate
+endif
+#Update popup when hovered/unhovered.
+<-G_bHoveredOver <-G_bHoveredOverLast neq if
+    @HoverPopupTextUpdate
+endif
+<-G_bHoveredOver ->G_bHoveredOverLast
+
+
+
+
+
+
+# # # # # # # # # # # #
+IsPaused if
+    return
+endif
+# # # # # # # # # # # #
+
+
+
+
+
+
+once
+    <-Radius @Cleanup
+    <-Amt <-Radius @FillCreeperCircle
+endonce
+<-TIMER0 1 sub 0 max ->TIMER0
+<-TIMER1 1 sub 0 max ->TIMER1
+<-TIMER2 1 sub 0 max ->TIMER2
+
+#If charging, display a delay timer.
+#Once the timer reaches 0, change to active.
+<-G_sState "CHARGING" eq if
+    <-TIMER1 eq0 if
+        300 ->TIMER1
+        1 <-Radius @BuildWallsCircle
+    endif
+
+    <-TIMER2 eq0 if
+        300 ->TIMER2
+        <-Amt <-Radius @FillCreeperCircle
+    endif
+
+    Self CONST_AMMO GetUnitAttribute ->fAmmo
+    <-fAmmo 1.0 gte if
+        <-fAmmo 1.0 sub ->fAmmo
+        Self CONST_AMMO <-fAmmo SetUnitAttribute
+        
+        <-Amt 0 gt if
+            <-TIMER0 <-TimeChangePerPacket abs add ->TIMER0
+        else
+            <-TIMER0 <-TimeChangePerPacket abs sub ->TIMER0
+            <-TIMER0 0 max ->TIMER0
+        endif
+        
+    endif
+
+    <-G_bHoveredOver not if
+        <-TIMER0 @GetFormattedTime SetPopupText
+    endif
+
+    <-TIMER0 eq0 if
+        "ACTIVE" @SetState
+    endif
+#If active
+else <-G_sState "ACTIVE" eq if
+    
+endif endif
+
+
+
+
+
+
+
+#
+# Core methods:
+#
+
+# Notation: s1 -
+# Arguments: The new state.
+# Result: 
+# Changes the current state of the unit.
+:SetState
+    ->G_sState
+
+    #If state changed to charging, start the charge timer.
+    <-G_sState "CHARGING" eq if
+        TRUE SetPopupTextAlwaysVisible
+        <-StartDelay ->TIMER0
+        0 ->TIMER1
+        150 ->TIMER2
+
+        Self CONST_CONNECTABLE TRUE SetUnitAttribute
+        Self CONST_REQUESTPACKETS TRUE SetUnitAttribute
+        Self CONST_CANREQUESTAMMO TRUE SetUnitAttribute
+        Self CONST_MAXAMMO 1000 SetUnitAttribute
+        Self CONST_AMMO 0 SetUnitAttribute
+    #If state changed to active
+    else <-G_sState "ACTIVE" eq if
+        "" SetPopupText
+        0 <-Radius @BuildWallsCircle
+        <-Amt <-Radius @FillCreeperCircle
+
+        "GRAY"
+        <-Amt 0 gt if "EMITTER" else "ANTIEMITTER" endif
+        "Bomb"
+        "Exploded"
+        CurrentCoords CellToPixel
+        ShowGameEventTag
+
+        Self 2 Destroy
+    endif endif
+
+# Notation: - 
+# Arguments: 
+# Result: 
+# Bresenham's circle algorithm.
+:BuildWallsCircle
+    ->BWC_iRadius
+    ->BWC_iWall
+    
+    3 <-BWC_iRadius 2 mul sub ->BWC_iD
+    0 ->BWC_iX
+    <-BWC_iRadius ->BWC_iY
+
+    0 ->BWC_iI
+    while <-BWC_iI 0 eq <-BWC_iX <-BWC_iY lte or repeat
+        CurrentX <-BWC_iX add CurrentY <-BWC_iY add <-BWC_iWall SetWall
+        CurrentX <-BWC_iX add CurrentY <-BWC_iY sub <-BWC_iWall SetWall
+        CurrentX <-BWC_iX sub CurrentY <-BWC_iY add <-BWC_iWall SetWall
+        CurrentX <-BWC_iX sub CurrentY <-BWC_iY sub <-BWC_iWall SetWall
+        CurrentX <-BWC_iY add CurrentY <-BWC_iX add <-BWC_iWall SetWall
+        CurrentX <-BWC_iY add CurrentY <-BWC_iX sub <-BWC_iWall SetWall
+        CurrentX <-BWC_iY sub CurrentY <-BWC_iX add <-BWC_iWall SetWall
+        CurrentX <-BWC_iY sub CurrentY <-BWC_iX sub <-BWC_iWall SetWall
+
+        <-BWC_iD 0 lt if
+            <-BWC_iX 4 mul 6 add <-BWC_iD add ->BWC_iD
+        else
+            <-BWC_iX <-BWC_iY sub 4 mul 10 add <-BWC_iD add ->BWC_iD
+            <-BWC_iY 1 sub ->BWC_iY
+        endif
+        <-BWC_iX 1 add ->BWC_iX
+        <-BWC_iI 1 add ->BWC_iI
+    endwhile
+# Notation: - 
+# Arguments: 
+# Result: 
+# Fill the circle with creeper.
+:FillCreeperCircle
+    ->FCC_iRadius
+    ->FCC_fAmt
+
+    CurrentCoords GetTerrain ->FCC_iBaseTerrain
+    <-FCC_fAmt 0 gt if
+        TRUE ->FCC_bMax
+    else
+        FALSE ->FCC_bMax
+    endif
+
+    CurrentY <-FCC_iRadius add 1 add CurrentY <-FCC_iRadius sub do
+        CurrentX <-FCC_iRadius add 1 add CurrentX <-FCC_iRadius sub do
+            CurrentCoords I J Distance <-FCC_iRadius lt if
+                I J
+                <-FCC_bMax if <-FCC_iBaseTerrain I J GetTerrain sub else I J GetTerrain <-FCC_iBaseTerrain sub endif
+                <-FCC_fAmt add
+                <-FCC_bMax if 0    max else 0     min endif
+                <-FCC_bMax if 2000 min else -2000 max endif
+                SetCreeper 
+            endif
+        loop
+    loop
+
+# Notation: - 
+# Arguments: 
+# Result: 
+# Clear walls/creeper inside the circle.
+:Cleanup
+    ->CLE_iRadius
+
+    CurrentY <-CLE_iRadius add 1 add CurrentY <-CLE_iRadius sub do
+        CurrentX <-CLE_iRadius add 1 add CurrentX <-CLE_iRadius sub do
+            CurrentCoords I J Distance <-CLE_iRadius lt if
+                I J 0 SetCreeper
+                I J 0 SetWall
+            endif
+        loop
+    loop
+
+# Notation: -
+# Arguments: 
+# Result: 
+# Updates hover text for the unit.
+# Called whenever the mouse is on the unit (to update numbers) and on mouse in/out events to switch between persistent and hover text.
+:HoverPopupTextUpdate
+    <-G_bHoveredOver if
+        48 SetPopupTextY
+        0 SetPopupTextX
+        @UpdatePopupText
+    else
+        16 SetPopupTextY
+        0 SetPopupTextX
+        <-G_sState "CHARGING" eq if
+            <-TIMER0 @GetFormattedTime SetPopupText
+        else
+            "" SetPopupText
+        endif
+    endif
+
+
+
+
+
+
+
+
+#
+# Helper methods for main logic methods below:
+#
+
+# Notation: -
+# Arguments:
+# Result: 
+# Switches popup text to mouse hover mode.
+:UpdatePopupText
+    
+    "CREEPER BOMB"
+    <-NL
+    
+    "1 Ammo Packet "
+    <-Amt 0 gt if
+        "adds " <-NL <-TimeChangePerPacket abs " frames to the timer "
+    else
+        "removes " <-NL <-TimeChangePerPacket abs " frames from the timer "
+    endif
+    "(" <-TimeChangePerPacket abs @GetFormattedTime ")"
+    <-NL "--" <-NL
+    "CONTAINS "
+    <-Amt 0 gt if
+        "CREEPER"
+    else <-Amt 0 lt if
+        "ANTI-CREEPER"
+    else
+        "NOTHING"
+    endif endif
+
+    <-NL
+    "CONNECTABLE"
+    
+    StackSize 1 sub 0 do concat loop
+    SetPopupText
+
+
+
+
+
+
+
+#
+# Utility methods:
+#
+
+# Notation: i1 - s1
+# Arguments: Time in game frames.
+# Result: Formatted string in minutes + seconds.
+# Formats time for display with the delay timer.
+:GetFormattedTime
+    ->GFT_iFrames
+
+    <-GFT_iFrames 30.0 div ->GFT_fSeconds
+
+    <-GFT_fSeconds 60 lt if
+        <-GFT_fSeconds ceil "s" concat
+    else 
+        <-GFT_fSeconds 60.0 div floor "m " concat <-GFT_fSeconds 60 mod ceil "s" concat concat
+    endif
+
+
+
+
+
+
+
+
+#
+# Built-in events:
+#
+:awake
+    TRUE OperateWhilePaused
+
+"
+"   ->NL
+
+    TRUE ->IDENTIFIER_CREEPERBOMB
+
+    Self CONST_CREATEPZ FALSE SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY FALSE SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS FALSE SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES FALSE SetUnitAttribute
+    Self CONST_TAKEMAPSPACE TRUE SetUnitAttribute
+
+    Self "main" "DEFAULT" SetImage
+    Self "main" 1 1 SetImageScale
+    Self "main2" "Custom3" SetImage
+
+    <-Radius 1 eq if
+        Self "aura" "Custom3_256" SetImage
+        Self "aura" <-Radius 3.0 div 2.0 mul 0.37 add dup SetImageScale
+    else <-Radius 5 lte if
+        Self "aura" "Custom3_256" SetImage
+        Self "aura" <-Radius 3.0 div 2.0 mul 0.6 add dup SetImageScale
+    else <-Radius 7 lte if
+        Self "aura" "Custom7_256" SetImage
+        Self "aura" <-Radius 3.0 div 2.0 mul 0.65 add dup SetImageScale
+    else
+        Self "aura" "Custom7_256" SetImage
+        Self "aura" <-Radius 3.0 div 2.0 mul 0.65 add dup SetImageScale
+    endif endif endif
+
+    Self "main" -0.1 SetImagePositionZ
+    Self "main2" -0.2 SetImagePositionZ
+    Self "aura" 0.9 SetImagePositionZ
