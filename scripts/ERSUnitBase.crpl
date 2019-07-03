@@ -56,6 +56,13 @@ once
     #1 ->BERTHA
     #1 ->THOR
 
+    Self CONST_TAKEMAPSPACE         TRUE SetUnitAttribute
+    Self CONST_CREATEPZ             TRUE SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS    FALSE SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY     TRUE SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES     TRUE SetUnitAttribute
+    Self CONST_DESTROYMODE              2 SetUnitAttribute
+
     255 ->iAlphaHaloSelected
     115 ->iAlphaHaloNotSelected
 
@@ -466,8 +473,6 @@ endif endif
 "   ->NL
 
     TRUE ->IDENTIFIER_ERSUNITBASE
-
-    Self CONST_SUPPORTSDIGITALIS FALSE SetUnitAttribute
 
     #List of type names for the popup text.
     CreateList ->G_l2dTypeNames

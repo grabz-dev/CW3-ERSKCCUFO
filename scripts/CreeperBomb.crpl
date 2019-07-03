@@ -9,6 +9,13 @@ $TimeChangePerPacket:45
 
 #Constructor
 once
+    Self CONST_TAKEMAPSPACE         TRUE SetUnitAttribute
+    Self CONST_CREATEPZ             FALSE SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS    FALSE SetUnitAttribute
+    Self CONST_COUNTSFORVICTORY     FALSE SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES     FALSE SetUnitAttribute
+    Self CONST_DESTROYMODE              2 SetUnitAttribute
+
     @awake
 
     Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
@@ -121,7 +128,6 @@ endif endif
 
     #If state changed to charging, start the charge timer.
     <-G_sState "CHARGING" eq if
-        TRUE SetPopupTextAlwaysVisible
         <-StartDelay ->TIMER0
         0 ->TIMER1
         150 ->TIMER2
@@ -329,12 +335,6 @@ endif endif
 
     TRUE ->IDENTIFIER_CREEPERBOMB
 
-    Self CONST_CREATEPZ FALSE SetUnitAttribute
-    Self CONST_COUNTSFORVICTORY FALSE SetUnitAttribute
-    Self CONST_SUPPORTSDIGITALIS FALSE SetUnitAttribute
-    Self CONST_NULLIFIERDAMAGES FALSE SetUnitAttribute
-    Self CONST_TAKEMAPSPACE TRUE SetUnitAttribute
-
     Self "main" "DEFAULT" SetImage
     Self "main" 1 1 SetImageScale
     Self "main2" "Custom3" SetImage
@@ -356,3 +356,8 @@ endif endif
     Self "main" -0.1 SetImagePositionZ
     Self "main2" -0.2 SetImagePositionZ
     Self "aura" 0.9 SetImagePositionZ
+
+    TRUE SetPopupTextAlwaysVisible
+    "" SetPopupText
+:gameloaded
+    @HoverPopupTextUpdate
