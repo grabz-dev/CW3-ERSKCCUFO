@@ -76,9 +76,11 @@ endonce
         1 <-Radius @BuildWallsCircle
     endif
 
-    CurrentCoords <-Radius GetUnitsInRange 0 do
-        0.005 Damage
-    loop
+    <-Amt 0 gt if
+        CurrentCoords <-Radius GetUnitsInRange 0 do
+            0.005 Damage
+        loop
+    endif
 
     Self CONST_AMMO GetUnitAttribute ->fAmmo
     <-fAmmo 1.0 gte if
