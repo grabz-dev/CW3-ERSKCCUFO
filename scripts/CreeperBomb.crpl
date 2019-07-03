@@ -64,11 +64,9 @@ endif
 
 once
     <-Radius @Cleanup
-    <-Amt <-Radius @FillCreeperCircle
 endonce
 <-TIMER0 1 sub 0 max ->TIMER0
 <-TIMER1 1 sub 0 max ->TIMER1
-<-TIMER2 1 sub 0 max ->TIMER2
 
 #If charging, display a delay timer.
 #Once the timer reaches 0, change to active.
@@ -78,10 +76,9 @@ endonce
         1 <-Radius @BuildWallsCircle
     endif
 
-    <-TIMER2 eq0 if
-        300 ->TIMER2
-        <-Amt <-Radius @FillCreeperCircle
-    endif
+    CurrentCoords <-Radius GetUnitsInRange 0 do
+        0.005 Damage
+    loop
 
     Self CONST_AMMO GetUnitAttribute ->fAmmo
     <-fAmmo 1.0 gte if
@@ -106,7 +103,7 @@ endonce
     endif
 #If active
 else <-G_sState "ACTIVE" eq if
-    
+    Self 0 Destroy #fallback destruction
 endif endif
 
 
@@ -130,7 +127,6 @@ endif endif
     <-G_sState "CHARGING" eq if
         <-StartDelay ->TIMER0
         0 ->TIMER1
-        150 ->TIMER2
 
         Self CONST_CONNECTABLE TRUE SetUnitAttribute
         Self CONST_REQUESTPACKETS TRUE SetUnitAttribute
@@ -268,6 +264,17 @@ endif endif
     
     "CREEPER BOMB"
     <-NL
+    <-Amt 0 neq if
+        <-Amt 0 gt if
+            <-Amt " Creeper per cell"
+        else
+            <-Amt neg " Anti-Creeper per cell"
+        endif
+    else
+        "Empty"
+    endif
+
+    <-NL <-NL
     
     "1 Ammo Packet "
     <-Amt 0 gt if
@@ -317,6 +324,19 @@ endif endif
         <-GFT_fSeconds 60.0 div floor "m " concat <-GFT_fSeconds 60 mod ceil "s" concat concat
     endif
 
+:DarkenColor
+    ->CRGB_iB
+    ->CRGB_iG
+    ->CRGB_iR
+
+    <-CRGB_iR 70 sub 0 max ->CRGB_iR
+    <-CRGB_iG 70 sub 0 max ->CRGB_iG
+    <-CRGB_iB 70 sub 0 max ->CRGB_iB
+
+    <-CRGB_iR
+    <-CRGB_iG
+    <-CRGB_iB
+
 
 
 
@@ -340,22 +360,74 @@ endif endif
     Self "main2" "Custom3" SetImage
 
     <-Radius 1 eq if
-        Self "aura" "Custom3_256" SetImage
-        Self "aura" <-Radius 3.0 div 2.0 mul 0.37 add dup SetImageScale
+        "Custom3_256" ->sImage
+        <-Radius 3.0 div 2.0 mul 0.37 add ->fScale
     else <-Radius 5 lte if
-        Self "aura" "Custom3_256" SetImage
-        Self "aura" <-Radius 3.0 div 2.0 mul 0.6 add dup SetImageScale
+        "Custom3_256" ->sImage
+        <-Radius 3.0 div 2.0 mul 0.6 add ->fScale
     else <-Radius 7 lte if
-        Self "aura" "Custom7_256" SetImage
-        Self "aura" <-Radius 3.0 div 2.0 mul 0.65 add dup SetImageScale
+        "Custom7_256" ->sImage
+        <-Radius 3.0 div 2.0 mul 0.65 add ->fScale
     else
-        Self "aura" "Custom7_256" SetImage
-        Self "aura" <-Radius 3.0 div 2.0 mul 0.65 add dup SetImageScale
+        "Custom7_256" ->sImage
+        <-Radius 3.0 div 2.0 mul 0.65 add ->fScale
     endif endif endif
+
+    Self "aura" <-sImage SetImage
+    Self "aura" <-fScale dup SetImageScale
+    GetCreeperColors 255 mul floor ->iB2 255 mul asint ->iG2 255 mul asint ->iR2 255 mul asint ->iB1 255 mul asint ->iG1 255 mul asint ->iR1
+
+    4 1 do
+        Self "aura" I concat <-sImage SetImage
+        Self "aura" I concat <-fScale dup SetImageScale
+        Self "aura" I concat 0.9 SetImagePositionZ
+
+        <-Amt 0 gt if
+            Self "aura" I concat <-iR1 <-iG1 <-iB1 255 SetImageColor
+        else
+            Self "aura" I concat <-iR2 <-iG2 <-iB2 255 SetImageColor
+        endif
+    loop
 
     Self "main" -0.1 SetImagePositionZ
     Self "main2" -0.2 SetImagePositionZ
-    Self "aura" 0.9 SetImagePositionZ
+    Self "aura" 0.8 SetImagePositionZ
+
+    <-Amt 0 neq if
+        <-Amt abs SetText
+        0.5 SetTextSize
+        0 SetTextX
+
+        <-Radius 5 gte if
+            -16 SetTextY
+
+            <-Amt 0 gt if
+                <-iR1 <-iG1 <-iB1 @DarkenColor 255 SetTextColor
+            else
+                <-iR2 <-iG2 <-iB2 @DarkenColor 255 SetTextColor
+            endif
+        else
+            <-Amt 0 gt if
+                <-iR1 <-iG1 <-iB1 255 SetTextColor
+            else
+                <-iR2 <-iG2 <-iB2 255 SetTextColor
+            endif
+
+            <-Radius 1 eq if
+                -4 SetTextY
+            else <-Radius 2 eq if
+                -17.5 SetTextY
+            else <-Radius 3 eq if
+                -24 SetTextY
+            else <-Radius 4 eq if
+                -30 SetTextY
+            endif endif endif endif
+        endif
+
+        
+    else
+        "" SetText
+    endif
 
     TRUE SetPopupTextAlwaysVisible
     "" SetPopupText
