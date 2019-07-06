@@ -13,6 +13,7 @@ $SniperHealth:300.0 # HP while on the ground
 
 $TargetOnly:"" # only target slected unit, leave blank for all targets
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
+$TargetRange:9999 # max cell range (radius), use 9999 for infitite
 
 # Graphics
 $StarPoints:5
@@ -26,6 +27,7 @@ $ImageClosest:"Custom24"
 $ImageRandom:"Custom25"
 $ImageRainmaker:"Custom26" # hand-write custom target images
 $ImageOffset:40 # "Custom[offset]" is collector
+$ImageRange:"Custom1_256"
 
 once
     ShowTraceLog
@@ -45,6 +47,14 @@ once
     endif
     Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
 endonce
+
+<-TargetRange 9000 lte if
+    @HandleRangeImage
+endif
+
+IsPaused if
+    return
+endif
 
 <-Busy not if
     <-nextUfo 0 lte if
@@ -91,6 +101,13 @@ endif
     
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
 
+:HandleRangeImage
+    GetMouseCell CurrentCoords Distance 2.9 lte if
+        Self "range" 255 255 255 255 SetImageColor
+    else
+        Self "range" 0 0 0 0 SetImageColor
+    endif
+
 :CreateUFO
     "CRPLCORE" CurrentCoords CreateUnit ->ufo
     <-ufo "UfoUnit.crpl" AddScriptToUnit
@@ -100,6 +117,7 @@ endif
     <-ufo "UfoUnit.crpl" "SniperHealth" <-SniperHealth SetScriptVar
     <-ufo "UfoUnit.crpl" "TargetOnly" <-TargetOnly SetScriptVar
     <-ufo "UfoUnit.crpl" "TargetClosest" <-TargetClosest SetScriptVar
+    <-ufo "UfoUnit.crpl" "TargetRange" <-TargetRange SetScriptVar
     1 ->Busy
 
 :SetText
@@ -155,8 +173,6 @@ endif
         atan2 SetImageRotation
 
 :CreateImages
-    Self RemoveImages
-
     Self "main" <-ImageMain SetImage
     Self "main" 5 3.0 div dup SetImageScale
 
@@ -184,6 +200,14 @@ endif
         "" ->TargetOnly
     endif
 
+    <-TargetRange 9000 lte if
+        Self "range" <-ImageRange SetImage
+        Self "range" <-TargetRange 1.5 div dup SetImageScale
+        Self "range" 0 0 0 0 SetImagePosition
+    else
+        Self "range" "none" SetImage
+    endif
+
 :Awake
     Self CONST_TAKEMAPSPACE 1 SetUnitAttribute
     Self CONST_CONNECTABLE 0 SetUnitAttribute
@@ -196,3 +220,5 @@ endif
 
     0.5 SetTextSize
     24 SetTextY
+
+    1 OperateWhilePaused

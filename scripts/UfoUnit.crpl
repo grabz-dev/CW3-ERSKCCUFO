@@ -11,12 +11,14 @@ $CreatedBy:-1 # creatorUID
 $Speed:2.0 # movement speed, pixels per frame
 $TargetOnly:"" # only target slected unit, leave blank for all targets
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
+$TargetRange:9999 # max cell range (radius), use 9999 for infitite
 
 # images
 $ImageUnit:"Custom21"
 $ImageRing:"Custom22"
 $ImageRingFront:"Custom23"
 $ImageOffset:40 # "Custom[offset]" is collector
+$ImageRange:"Custom1_256"
 
 once
     ShowTraceLog
@@ -52,6 +54,14 @@ once
     @EnterRising
 endonce
 
+<-TargetRange 9000 lte if
+    @HandleRangeImage
+endif
+
+IsPaused if
+    return
+endif
+
 # dispatch action
 <-State <-STATE_CRASHED lt if
     <-State <-STATE_MOVING lt if
@@ -82,33 +92,6 @@ else
         endif
     endif
 endif
-
-#<-State <-STATE_RISING eq if
-#    @ProcessRising
-#else <-State <-STATE_SEARCHING eq if
-#    @ProcessSearching
-#else <-State <-STATE_MOVING eq if
-#    @ProcessMoving
-#else <-State <-STATE_FALLING eq if
-#    @ProcessFalling
-#else <-State <-STATE_CRASHED eq if
-#    @ProcessCrashed
-#else <-State <-STATE_BEAM_DOWN eq if
-#    @ProcessBeamDown
-#else <-State <-STATE_BEAM_UP eq if
-#    @ProcessBeamUp
-#else <-State <-STATE_RETREAT eq if
-#    @ProcessRetreat
-#else
-#    "INVALID STATE" Trace
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
 
 # move slaves
 CurrentPixelCoords ->cy ->cx
@@ -188,6 +171,14 @@ endif
     "Weapons4"   ->SOUND_INTAKE
     "Explosion7" ->SOUND_DESTROYED
 
+:HandleRangeImage
+    GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and if
+        Self "range" 255 255 255 255 SetImageColor
+        Self "range" <-riseLevel neg SetImagePositionY
+    else
+        Self "range" 0 0 0 0 SetImageColor
+    endif
+
 :CreateSlave # type - uid
     ->type
     "CRPLCORE" CurrentCoords CreateUnit ->slave
@@ -256,6 +247,7 @@ endif
         Self CONST_PIXELCOORDY <-StartY <-Elevation add SetUnitAttribute
         Self "shadow" <-ShadowX SetImagePositionX
         Self "shadow" <-ShadowY SetImagePositionY
+        <-Elevation ->riseLevel
         @InitFlyingState # only call this at the end of "process rising"
         <-OldState <-STATE_RETREAT eq if
             @EnterRetreat
@@ -278,7 +270,7 @@ endif
         # find closest target
         999999999 ->best
         -1 ->Target
-        CurrentCoords 1000 1 GetAllUnitsInRange 0 do
+        CurrentCoords <-Elevation 8.0 div add 0 Round <-TargetRange 0 GetAllUnitsInRange 0 do
             ->uid
             <-uid @IsUnitValidTarget if
                 CurrentPixelCoords <-Elevation sub # ground level pixel position
@@ -295,7 +287,7 @@ endif
         # find target by a single walk-though with random selection
         0 ->count
         -1 ->Target
-        CurrentCoords 1000 1 GetAllUnitsInRange 0 do
+        CurrentCoords <-Elevation 8.0 div add 0 Round <-TargetRange 0 GetAllUnitsInRange 0 do
             ->uid
             <-uid @IsUnitValidTarget if
                 <-count 1 add ->count
@@ -415,6 +407,7 @@ endif
             else
                 Self "shadow" 0 SetImagePositionX
                 Self "shadow" 0 SetImagePositionY
+                0 ->riseLevel
                 @EnterCrashed
             endif
         endif
@@ -717,6 +710,7 @@ endif
     # - 77-76 sucked unit images
     # - 75-74 back rings
     # - 10 shadow
+    Self RemoveImages
 
     Self "main" <-ImageUnit SetImage
     Self "main" -80 SetImagePositionZ
@@ -739,6 +733,12 @@ endif
         Self <-name -78 I -0.01 mul add SetImagePositionZ
     loop
 
+    <-TargetRange 9000 lte if
+        Self "range" <-ImageRange SetImage
+        Self "range" <-TargetRange 1.5 div dup SetImageScale
+        Self "range" 0 0 0 0 SetImagePosition
+    endif
+
 :Awake
     Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
     Self CONST_CONNECTABLE 0 SetUnitAttribute
@@ -760,7 +760,7 @@ endif
     <-AmmoSlave "main" "none" SetImage
     <-HealthSlave "main" "none" SetImage
     
-    0 OperateWhilePaused
+    1 OperateWhilePaused
 
 :Destroyed
     <-CreatedBy "UfoMaker.crpl" "Busy" 0 SetScriptVar
