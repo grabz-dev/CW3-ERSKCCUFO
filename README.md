@@ -65,6 +65,7 @@ UFO Unit Settings:
    * *SniperHealth* - The (real) health of the UFO, this can only be damaged by snipers when fallen and doesn't regenerate.
    * *TargetOnly* - Make UFO target only a specific unit type. List of avaliable types below.
    * *TargetClosest* - 1 to target closest possible target, 0 to target random target. UFO always has infinite range.
+   * *TargetRange* - UFO unit target range, in cell radius around the UFO. Use 9999 for infinite range.
    
 Possible units types for *TargetOnly*:
    * COLLECTOR
