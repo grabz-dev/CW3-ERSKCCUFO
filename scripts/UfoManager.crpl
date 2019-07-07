@@ -1,0 +1,31 @@
+# UfoManager.crpl
+# Created on: 7/7/2019 8:23:52 PM
+# ------------------------------------------
+
+#GarbageList:[]
+$IsUfoManager:1
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    @Awake
+
+    CreateList ->GarbageList
+endonce
+
+<-GarbageList GetListCount 0 do
+    <-GarbageList 0 GetListElement --? #refdelete
+    <-GarbageList 0 RemoveListElement
+loop
+
+:Awake
+    Self "main" "none" SetImage
+    Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    

@@ -12,6 +12,8 @@ $Speed:2.0 # movement speed, pixels per frame
 $TargetOnly:"" # only target slected unit, leave blank for all targets
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
 $TargetRange:9999 # max cell range (radius), use 9999 for infitite
+$OffsetX:0.0
+$OffsetY:0.0
 
 # images
 $ImageUnit:"Custom21"
@@ -38,6 +40,8 @@ once
     @Awake
     @CreateImages
 
+    @TargetManagerInit
+
     Self CONST_HEALTH <-SniperHealth SetUnitAttribute
     
     ### DEVELOPMENT ###
@@ -51,6 +55,7 @@ once
         <-TargetOnly 9 <-TargetOnly StringLength 9 sub SubString ->TargetScript
     endif
 
+    1 ->firstRising
     @EnterRising
 endonce
 
@@ -171,6 +176,29 @@ endif
     "Weapons4"   ->SOUND_INTAKE
     "Explosion7" ->SOUND_DESTROYED
 
+:TargetManagerInit
+    -1 ->TargetManager
+    "IsUfoManager" 1 GetCoresWithVar 0 do
+        ->TargetManager
+    loop
+    <-TargetManager -1 eq if
+        "CRPLCORE" 0 0 CreateUnit ->TargetManager
+        <-TargetManager "UfoManager.crpl" AddScriptToUnit
+    endif
+
+:TargetManagerCheck # uid - bool
+    ->TM_Uid
+    1 sub(<-TargetManager "UfoManager.crpl" <-TM_Uid GetScriptVar) return
+
+:TargetManagerClaim # uid -
+    ->TM_Uid
+    <-TargetManager "UfoManager.crpl" <-TM_Uid 1 SetScriptVar
+
+:TargetManagerRelease # uid -
+    ->TM_Uid
+    <-TargetManager "UfoManager.crpl" <-TM_Uid 0 SetScriptVar
+    <-TargetManager "UfoManager.crpl" "GarbageList" GetScriptVar <-TM_Uid AppendToList
+
 :HandleRangeImage
     GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and if
         Self "range" 255 255 255 255 SetImageColor
@@ -229,6 +257,13 @@ endif
 
 :EnterRising
     Self CONST_PIXELCOORDY GetUnitAttribute ->StartY
+    Self CONST_PIXELCOORDX GetUnitAttribute ->StartX
+    <-firstRising if
+        0 ->firstRising
+    else
+        0 ->OffsetX
+        0 ->OffsetY
+    endif
     0 ->riseLevel
     <-SOUND_RISING PlaySound
     <-STATE_RISING ->State
@@ -240,11 +275,14 @@ endif
 :ProcessRising
     <-riseLevel 0.25 add ->riseLevel
     <-riseLevel <-Elevation lt if
-        Self CONST_PIXELCOORDY <-StartY <-riseLevel add SetUnitAttribute
-        Self "shadow" <-riseLevel <-Elevation div <-ShadowX mul SetImagePositionX
-        Self "shadow" <-riseLevel <-Elevation div <-ShadowY mul SetImagePositionY
+        <-riseLevel <-Elevation div ->relLevel
+        Self CONST_PIXELCOORDX <-StartX                 <-relLevel <-OffsetX mul add SetUnitAttribute
+        Self CONST_PIXELCOORDY <-StartY <-riseLevel add <-relLevel <-OffsetY mul add SetUnitAttribute
+        Self "shadow" <-relLevel <-ShadowX mul SetImagePositionX
+        Self "shadow" <-relLevel <-ShadowY mul SetImagePositionY
     else
-        Self CONST_PIXELCOORDY <-StartY <-Elevation add SetUnitAttribute
+        Self CONST_PIXELCOORDX <-StartX                 <-OffsetX add SetUnitAttribute
+        Self CONST_PIXELCOORDY <-StartY <-Elevation add <-OffsetY add SetUnitAttribute
         Self "shadow" <-ShadowX SetImagePositionX
         Self "shadow" <-ShadowY SetImagePositionY
         <-Elevation ->riseLevel
@@ -300,6 +338,7 @@ endif
 
     # start moving if a target is found
     <-Target -1 neq if
+        <-Target @TargetManagerClaim
         @EnterMoving
     endif
 
@@ -309,6 +348,7 @@ endif
 
 :ProcessMoving
     @ProcessFlyingState if
+        <-Target @TargetManagerRelease
         return
     endif
 
@@ -339,6 +379,10 @@ endif
 
 :IsUnitValidTarget # uid - bool
     ->uid
+    <-uid @TargetManagerCheck not if
+        0 return # already targeted by different ufo
+    endif
+
     <-uid GetUnitType ->type
     <-TargetOnly "" neq if 
         <-TargetOnly "CRPLCORE:" StartsWith if
@@ -444,6 +488,7 @@ endif
             Self "front" I concat 0 0 SetImageScale
         loop
         <-Target 1 SetUnitSelectableOverride
+        <-Target @TargetManagerRelease
         return
     endif
 
@@ -597,6 +642,7 @@ endif
     <-AbductedType "COMMANDNODE" eq if
         <-Target CONST_PIXELCOORDX 10000 SetUnitAttribute
     endif
+    <-Target @TargetManagerRelease
     <-Target 0 @SafeDestroy
 
     <-RINGS 2 mul ->beamAnim
@@ -763,7 +809,7 @@ endif
     1 OperateWhilePaused
 
 :Destroyed
-    <-CreatedBy "UfoMaker.crpl" "Busy" 0 SetScriptVar
+    <-CreatedBy "UfoMaker.crpl" "Busy" SetScriptVar(<-CreatedBy "UfoMaker.crpl" "Busy" GetScriptVar 1 sub)
     <-HealthSlave 0 Destroy
     <-AmmoSlave 0 Destroy
 
