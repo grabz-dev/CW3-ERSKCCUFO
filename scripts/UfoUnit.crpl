@@ -199,6 +199,10 @@ endif
     <-TargetManager "UfoManager.crpl" <-TM_Uid 0 SetScriptVar
     <-TargetManager "UfoManager.crpl" "GarbageList" GetScriptVar <-TM_Uid AppendToList
 
+:GetAndIncreaseQueue # -
+    <-TargetManager "UfoManager.crpl" "Queue" GetScriptVar ->Queue
+    <-TargetManager "UfoManager.crpl" "Queue" <-Queue 1 add SetScriptVar
+
 :HandleRangeImage
     GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and if
         Self "range" 255 255 255 255 SetImageColor
@@ -297,6 +301,7 @@ endif
 :EnterSearching
     RandFloat 0.5 sub ->VX
     RandFloat 0.5 sub ->VY
+    @GetAndIncreaseQueue
     <-STATE_SEARCHING ->State
 
 :ProcessSearching
@@ -304,6 +309,11 @@ endif
         return
     endif
 
+    <-Queue neq0 if
+        <-Queue 1 sub ->Queue
+        return
+    endif
+    
     <-TargetClosest if
         # find closest target
         999999999 ->best
@@ -340,6 +350,9 @@ endif
     <-Target -1 neq if
         <-Target @TargetManagerClaim
         @EnterMoving
+    else
+        # target not found - requeue
+        @GetAndIncreaseQueue
     endif
 
 :EnterMoving
