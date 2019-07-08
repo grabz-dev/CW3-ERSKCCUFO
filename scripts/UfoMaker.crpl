@@ -5,6 +5,7 @@
 # Ufo maker settings
 $InitialDelay:60 # in seconds
 $ProductionDelay:30 # UFO making delay, counter starts after the previous UFO disapears off-map
+$UfosSpawned:1 # How many UFOs spawn at once, maximum amount is 5
 
 # Ufo settings
 $Speed:2.0 # movement speed, pixels per frame
@@ -13,6 +14,7 @@ $SniperHealth:300.0 # HP while on the ground
 
 $TargetOnly:"" # only target slected unit, leave blank for all targets
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
+$TargetRange:9999 # max cell range (radius), use 9999 for infitite
 
 # Graphics
 $StarPoints:5
@@ -21,16 +23,25 @@ $StarOffset:1
 # Images
 $ImageMain:"Custom20"
 $ImageLine:"Custom1pp"
+$ImageRange:"Custom1_256"
 
+# config flag images
 $ImageClosest:"Custom24"
 $ImageRandom:"Custom25"
-$ImageRainmaker:"Custom26" # hand-write custom target images
+$ImageFinite:"Custom26"
+$ImageInfinite:"Custom27"
+$ImageUfosOffset:28
+
+#unit images
+$ImageRainmaker:"Custom64" # hand-write custom target images
 $ImageOffset:40 # "Custom[offset]" is collector
 
 once
     ShowTraceLog
     ClearTraceLog
     HideTraceLog
+
+    <-UfosSpawned 1 max 5 min ->UfosSpawned
 
     @Awake
     @DefineConstants
@@ -46,7 +57,15 @@ once
     Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
 endonce
 
-<-Busy not if
+<-TargetRange 9000 lte if
+    @HandleRangeImage
+endif
+
+IsPaused if
+    return
+endif
+
+<-Busy 0 lte if
     <-nextUfo 0 lte if
         @CreateUFO
         <-ProductionDelay 30 mul ->nextUfo
@@ -91,19 +110,69 @@ endif
     
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
 
+    <-UfosSpawned CreateListStartingSize ->OffsetsX
+    <-UfosSpawned CreateListStartingSize ->OffsetsY
+
+    12.0 ->offset
+    <-UfosSpawned 1 eq if
+        <-OffsetsX 0 0.0 SetListElement
+        <-OffsetsY 0 0.0 SetListElement
+    endif
+    <-UfosSpawned 2 eq if
+        <-OffsetsX 0 <-offset     SetListElement
+        <-OffsetsY 0 0.0          SetListElement
+        <-OffsetsX 1 <-offset neg SetListElement
+        <-OffsetsY 1 0.0          SetListElement
+    endif
+    <-UfosSpawned 3 eq if
+        <-OffsetsX 0 0.0                 SetListElement
+        <-OffsetsY 0 <-offset 1.333 mul  SetListElement
+        <-OffsetsX 1 <-offset neg        SetListElement
+        <-OffsetsY 1 <-offset -0.666 mul SetListElement
+        <-OffsetsX 2 <-offset            SetListElement
+        <-OffsetsY 2 <-offset -0.666 mul SetListElement
+    endif
+    <-UfosSpawned 4 gte if
+        <-OffsetsX 0 <-offset     SetListElement
+        <-OffsetsY 0 <-offset neg SetListElement
+        <-OffsetsX 1 <-offset neg SetListElement
+        <-OffsetsY 1 <-offset neg SetListElement
+        <-OffsetsX 2 <-offset neg SetListElement
+        <-OffsetsY 2 <-offset     SetListElement
+        <-OffsetsX 3 <-offset     SetListElement
+        <-OffsetsY 3 <-offset     SetListElement
+    endif
+    <-UfosSpawned 5 eq if
+        <-OffsetsX 4 0.0 SetListElement
+        <-OffsetsY 4 0.0 SetListElement
+    endif
+
+:HandleRangeImage
+    GetMouseCell CurrentCoords Distance 2.9 lte if
+        Self "range" 255 255 255 255 SetImageColor
+    else
+        Self "range" 0 0 0 0 SetImageColor
+    endif
+
 :CreateUFO
-    "CRPLCORE" CurrentCoords CreateUnit ->ufo
-    <-ufo "UfoUnit.crpl" AddScriptToUnit
-    <-ufo "UfoUnit.crpl" "CreatedBy" Self SetScriptVar
-    <-ufo "UfoUnit.crpl" "Speed" <-Speed SetScriptVar
-    <-ufo "UfoUnit.crpl" "BeamHealth" <-BeamHealth SetScriptVar
-    <-ufo "UfoUnit.crpl" "SniperHealth" <-SniperHealth SetScriptVar
-    <-ufo "UfoUnit.crpl" "TargetOnly" <-TargetOnly SetScriptVar
-    <-ufo "UfoUnit.crpl" "TargetClosest" <-TargetClosest SetScriptVar
-    1 ->Busy
+    <-UfosSpawned 0 do
+        "CRPLCORE" CurrentCoords CreateUnit ->ufo
+        <-ufo "UfoUnit.crpl" AddScriptToUnit
+        <-ufo "UfoUnit.crpl" "CreatedBy" Self SetScriptVar
+        <-ufo "UfoUnit.crpl" "Speed" <-Speed SetScriptVar
+        <-ufo "UfoUnit.crpl" "BeamHealth" <-BeamHealth SetScriptVar
+        <-ufo "UfoUnit.crpl" "SniperHealth" <-SniperHealth SetScriptVar
+        <-ufo "UfoUnit.crpl" "TargetOnly" <-TargetOnly SetScriptVar
+        <-ufo "UfoUnit.crpl" "TargetClosest" <-TargetClosest SetScriptVar
+        <-ufo "UfoUnit.crpl" "TargetRange" <-TargetRange SetScriptVar
+        <-ufo "UfoUnit.crpl" "OffsetX" <-OffsetsX I GetListElement SetScriptVar
+        <-ufo "UfoUnit.crpl" "OffsetY" <-OffsetsY I GetListElement SetScriptVar
+    loop
+    <-UfosSpawned ->Busy
+
 
 :SetText
-    <-Busy if
+    <-Busy 0 gt if
         "♃♄⚵ ♅♆ ♇☦" SetText
         256 0 64 256 SetTextColor
     else
@@ -155,8 +224,6 @@ endif
         atan2 SetImageRotation
 
 :CreateImages
-    Self RemoveImages
-
     Self "main" <-ImageMain SetImage
     Self "main" 5 3.0 div dup SetImageScale
 
@@ -182,7 +249,30 @@ endif
         Self "only" 0.666666 dup SetImageScale
     else
         "" ->TargetOnly
+        Self "only" "none" SetImage
     endif
+
+    <-UfosSpawned 1 gt if
+        Self "ufos" "Custom" <-UfosSpawned 2 sub <-ImageUfosOffset add concat SetImage
+        Self "ufos" -20 20 -0.01 SetImagePosition
+        Self "ufos" 0.666666 dup SetImageScale
+    else
+        Self "ufos" "none" SetImage
+    endif
+
+    <-TargetRange 9000 lte if
+        Self "range" <-ImageRange SetImage
+        Self "range" <-TargetRange 1.5 div dup SetImageScale
+        Self "range" 0 0 0 0 SetImagePosition
+
+        Self "rangee" <-ImageFinite SetImage
+    else
+        Self "range" "none" SetImage
+        
+        Self "rangee" <-ImageInfinite SetImage
+    endif
+    Self "rangee" 20 20 -0.01 SetImagePosition
+    Self "rangee" 0.666666 dup SetImageScale
 
 :Awake
     Self CONST_TAKEMAPSPACE 1 SetUnitAttribute
@@ -195,4 +285,6 @@ endif
     Self CONST_CELLHEIGHT 5 SetUnitAttribute
 
     0.5 SetTextSize
-    24 SetTextY
+    32 SetTextY
+
+    1 OperateWhilePaused

@@ -1,0 +1,10 @@
+# HoverUnit.crpl
+# Created on: 7/2/2019 9:48:37 PM
+# ------------------------------------------
+once
+    @awake
+endonce
+
+:awake
+    TRUE OperateWhilePaused
+    TRUE ->IDENTIFIER_HOVERUNIT

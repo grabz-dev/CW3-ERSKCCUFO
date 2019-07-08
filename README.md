@@ -47,17 +47,27 @@ Cloud Settings:
 
 UFO Base creates UFOs that go and abduct friendly units. UFOs can be temporarly disabled by shooting them with beams, at which point they fall on the ground and can be damaged by snipers. However, fallen UFOs can quickly regenerate and start flying again, shooting it down again with beams will make it crash again, making them damagable by snipers once more. Only "shields" (damagable by beams) is regenerated, real health (damagable by snipers) never regeneates on an UFO.
 
-When you destroy a fallen UFO after it abducted one of your units, that unit will re-spawn at the UFO's current position (except for CN). If a ufo falls where is no terrain, it will instead keep falling into the void, if that happens or the UFO gets away, you will permanently lose the abducted unit (except for CN) and the spawner will begin cooldown towards the next UFO.
+Destroying an UFO: When you destroy a fallen UFO after it abducted one of your units, that unit will re-spawn at the UFO's current position (except for CN). If a ufo falls where is no terrain, it will instead keep falling into the void, if that happens or the UFO gets away, you will permanently lose the abducted unit (except for CN) and the spawner will begin cooldown towards the next UFO.
 
 Image explanation:
-   * Unit image in bottom-left corner of a spawner - UFOs created by this spawner will only target that specific unit type.
-   * Dots with a cirle in the bottom-right corner of a spawner - UFOs created by this spawner will target CLOSEST possible target.
-   * Dots without a cirle in the bottom-right corner of a spawner - UFOs created by this spawner will target RANDOM possible target.
+   * Bottom-left corner - target type setting:
+     * No image - any (friendly) unit type can be targeted by this UFO
+     * Image of a unit - only units of this type can be targeted by this UFO
+   * Bottom-right corner - target selection setting:
+     * Dots with a cirle - closest possible target will be selected
+     * Dots without a cirle - random possible target will be selected
+   * Top-left corner - spawn amount setting:
+     * No image - 1 UFO will be spawned
+     * Image with X UFOs - X UFOs will be spawned
+   * Top-right corner - target range setting:
+     * 1 colored circle, 2 grayed out circles - limited UFO range (hover over UFO maker or UFO unit to see range)
+     * 3 colored circles - infinite UFO range
 
 ### UfoMaker.crpl
 UFO Maker Settings:
-   * *InitialDelay* - After start of the game, wait this many seconds before making the first UFO
-   * *ProductionDelay* - After a UFO is destroyed (or gets away), wait this many seconds before making the next UFO
+   * *InitialDelay* - After start of the game, wait this many seconds before making the first UFO.
+   * *ProductionDelay* - After a UFO is destroyed (or gets away), wait this many seconds before making the next UFO.
+   * *UfosSpawned* - Spawn this many UFOs at once. All of them need to be destroyed before the timer continues. Max 5.
    
 UFO Unit Settings:
    * *Speed* - UFO movement speed, in pixels per frame. 1 cell per second is approx 0.5 pixels per frame.
@@ -65,6 +75,7 @@ UFO Unit Settings:
    * *SniperHealth* - The (real) health of the UFO, this can only be damaged by snipers when fallen and doesn't regenerate.
    * *TargetOnly* - Make UFO target only a specific unit type. List of avaliable types below.
    * *TargetClosest* - 1 to target closest possible target, 0 to target random target. UFO always has infinite range.
+   * *TargetRange* - UFO unit target range, in cell radius around the UFO. Use 9999 for infinite range.
    
 Possible units types for *TargetOnly*:
    * COLLECTOR
@@ -75,7 +86,6 @@ Possible units types for *TargetOnly*:
    * SIPHON
    * TERP
    * GUPPY
-   
    * PULSECANNON
    * MORTAR
    * STRAFER
@@ -84,11 +94,18 @@ Possible units types for *TargetOnly*:
    * SPRAYER
    * BEAM
    * SNIPER
-   
    * BERTHA
    * GUPPYAIR
    * STRATERAIR
    * BOMBERAIR
-   
    * COMMANDNODE
    * CRPLCORE:CloudMaker
+
+## Creeper Bomb
+This unit keeps Creeper or AC inside, until it is released when the timer runs out. Connecting the core of the bomb will allow ammo transfer. Each ammo packet delivered to the core will increase the timer (for Creeper) or decrease the timer (for AC).
+
+### CreeperBomb.crpl
+   * *StartDelay* - The amount of time until the bomb is set off.
+   * *Radius* - The radius of the bomb.
+   * *Amt* - The amount of Creeper held inside. Negative values hold Anti-Creeper.
+   * *TimeChangePerPacket* - Can only be positive. The amount of time reduced from (for Creeper) or added to (for AC) the timer, in frames.
