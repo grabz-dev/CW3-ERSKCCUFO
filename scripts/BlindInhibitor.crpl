@@ -1,0 +1,100 @@
+# BlindInhibitor.crpl
+# Created on: 7/8/2019 5:14:17 PM
+# ------------------------------------------
+
+# Blind inhibitor config
+$Squences:"123,132"
+
+# Inhibitor config
+$EmitInterval:90 # creeper create interval, in frames
+$EmitAmount:250.0 # creeper created amount, in float creeper amount
+
+# internal comminucation: do not touch
+$IsBlindInhibitor:1
+#$InputSequence:[]
+$ImageInhibitor:"Custom4_128"
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    @InitSequences
+    @Awake
+
+    CreateList ->InputSequence
+    0 ->LastLength
+endonce
+
+<-LastLength <-InputSequence GetListCount neq if
+    <-InputSequence GetListCount ->LastLength
+    # update
+    @SetImage
+    @SetText ->valid
+    <-valid not if
+        Self 0 Destroy
+        return
+    endif
+    <-LastLength <-Seqs 0 GetListElement GetListCount eq if
+        @SpawnInhibitor
+        Self 0 Destroy
+        return
+    endif
+endif
+
+:InitSequences
+    <-Squences "," Split ->SeqNames
+    CreateList ->Seqs
+    <-SeqNames GetListCount 0 do
+        <-SeqNames I GetListElement ->seqS
+        CreateList ->seqL
+        <-seqS StringLength 0 do
+            <-seqL AppendToList(<-seqS I 1 Substring asint)
+        loop
+        <-Seqs <-seqL AppendToList
+    loop
+
+:SpawnInhibitor
+    "INHIBITOR" CurrentCoords CreateUnit ->inhib
+    <-inhib 0 "PRODUCTIONINTERVAL" <-EmitInterval SetScriptVar
+    <-inhib 0 "PRODUCTIONAMT" <-EmitAmount 1000000 mul SetScriptVar
+
+:SetText # - count
+    "" ->text
+    0 ->count
+    <-Seqs GetListCount 0 do
+        <-Seqs I GetListElement ->seq
+        1 # same flag
+        <-InputSequence GetListCount 0 do
+            <-InputSequence I GetListElement <-seq I GetListElement eq and
+        loop
+        if
+            <-text "
+" <-SeqNames I GetListElement concat concat ->text
+            <-count 1 add ->count
+        endif
+    loop
+    <-text SetText
+    0.5 SetTextSize
+    30 5 <-count mul add SetTextY
+
+    <-count return
+
+:SetImage
+    <-InputSequence GetListCount 1 add <-Seqs 0 GetListElement GetListCount 1 add div(asfloat) ->relAlpha
+    Self "main" <-ImageInhibitor SetImage
+    Self "main" 2.75 dup SetImageScale
+    Self "main" 255 255 255 255 <-relAlpha mul SetImageColor
+
+:Awake
+    Self CONST_COUNTSFORVICTORY 1 SetUnitAttribute # make sure the player has to clear the spawned inhibitor
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_TAKEMAPSPACE 1 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+    Self CONST_CELLWIDTH 7 SetUnitAttribute
+    Self CONST_CELLHEIGHT 7 SetUnitAttribute
+
+    @SetText
+    @SetImage

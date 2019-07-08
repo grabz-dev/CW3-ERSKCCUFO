@@ -1,0 +1,47 @@
+# BlindKey.crpl
+# Created on: 7/8/2019 5:14:23 PM
+# ------------------------------------------
+
+$KeyNumber:1
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    @Awake
+
+    -1 ->KeyId
+    CurrentCoords 0 1 GetAllUnitsInRange 0 do
+        dup GetUnitType "SHIELDKEY" eq if
+            ->KeyId
+        else
+            pop
+        endif
+    loop
+endonce
+
+<-KeyId CONST_ISDESTROYED GetUnitAttribute if
+    "IsBlindInhibitor" 1 GetCoresWithVar 0 do
+        "BlindInhibitor.crpl" "InputSequence" GetScriptVar dup Trace <-KeyNumber AppendToList
+    loop
+    
+    Self 0 Destroy
+endif
+
+:SetText
+    <-KeyNumber SetText
+    0.5 SetTextSize
+    15 SetTextY
+
+:Awake
+    Self "main" "none" SetImage
+
+    Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+
+    @SetText
