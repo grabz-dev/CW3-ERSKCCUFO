@@ -109,3 +109,17 @@ This unit keeps Creeper or AC inside, until it is released when the timer runs o
    * *Radius* - The radius of the bomb.
    * *Amt* - The amount of Creeper held inside. Negative values hold Anti-Creeper.
    * *TimeChangePerPacket* - Can only be positive. The amount of time reduced from (for Creeper) or added to (for AC) the timer, in frames.
+
+## Blind Inhibitor
+A "hidden" inhibitor that will spawn only after player collects shield keys. Any number of shield keys is possible (1, 2, 3, 4, ...), and for each order of key collection a different inhibitor can spawn, and 1 inhibitor can have multiple combinations. The player will see "blind" inhibitors as being semi-transparent with possible combinations above them as well as numbers above keys, so they will know which keys to collect in order to spawn which inhibitor.
+
+Wrong setting can resolve in an unpassable map, so make sure that the keys are set correctly. If some inhibitor sequences are missing, then the inhibitor might not spawn, and if some sequence is duplicated, then multiple inhibitors might spawn, eigter way the player can still win, however the keys must be set properly.
+
+### BlindInhibitor.crpl
+   * *Squences* - Which key sequences wil lactivate this inhibitor, separated by comma. Examples: "12" or "123,231,312".
+   * *EmitInterval* - Creeper spawn interval of the created inhibitor, in frames (1 second = 30 frames).
+   * *EmitAmount* - Amount of creeper produce, float creeper value, like in unit editor.
+
+### BlindKey.crpl
+   Place  and always keep under a shield key (on the same cell).
+   * *KeyNumber* - Number of this key for the inhibitor sequence.
