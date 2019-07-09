@@ -1,0 +1,199 @@
+# Help.crpl
+# Created on: 7/9/2019 6:35:28 PM
+# ------------------------------------------
+
+# Help script for CW3-GRSUFO template
+# Visit the Github: https://github.com/grabz-dev/CW3-ERSKCCUFO
+
+# disable/enable individual tabs, in case you don't use all the features
+$EnableKAGYU:1 # template "good lu" main board
+$EnableERS:1 # Enemy Radioactive Source
+$EnableUFO:1 # a cute alien muffin
+$EnableKCC:1 # Kajacx Creeper Cloud
+$EnableCCB:1 # Controllable Creeper Bomb
+$EnableSBI:1 # Semi-Blind Inhibitor
+
+$ImageHelp:"Custom2pp"
+$ImageClose:"Custom3pp"
+
+once
+    ShowTraceLog
+    ClearTraceLog
+    HideTraceLog
+
+    @DefineTabs
+    @Awake
+
+    -1 ->LastWidth
+    -1 ->LastHeight
+
+    0 ->CurrentTab
+    0 ->Shown
+endonce
+
+<-LastWidth ScreenWidth neq <-LastHeight ScreenHeight neq or if
+    @Resize
+    ScreenWidth ->LastWidth
+    ScreenHeight ->LastHeight
+endif
+
+0 GetMouseButtonDown if # left mouse button pressed
+    <-Shown if
+        @MouseOnTab ->tab
+        <-tab 0 gte if
+            <-tab ->CurrentTab
+            @ShowTab
+        endif
+        <-tab -2 eq @MouseOnHelp or if
+            0 @Hide
+        endif
+    else
+        @MouseOnHelp if
+            @Show
+        endif
+    endif
+endif
+
+:DefineTabs
+    # just follow the tempalte, for each tab you need:
+    # Image name for tab header, simple string
+    # Image names for tab conent, consisting of offset, and postfix
+    # Image name will be determined as "Custom" + (offset + index) + postfix
+    # And don't forget the $EnableTab:1 flag!
+
+    CreateList ->Tabs
+
+    "KAGYU" "Custom4pp" 10 "_256pp" @RegisterTab
+    "ERS" "Custom5pp" 16 "_256pp" @RegisterTab
+    "UFO" "Custom6pp" 16 "_256" @RegisterTab
+    "KCC" "Custom7pp" 4 "_256pp" @RegisterTab
+    "CCB" "Custom8pp" 22 "_256pp" @RegisterTab
+    "SBI" "Custom9pp" 22 "_256" @RegisterTab
+
+:RegisterTab # Name Header Index Postfix
+    ->RT_P
+    ->RT_I
+    ->RT_H
+    ->RT_N
+
+    "Enable" <-RT_N concat <-! not if
+        return
+    endif
+
+    <-Tabs <-RT_N AppendToList
+    <-RT_H "Header" <-RT_N concat ->!
+    <-RT_I "Index" <-RT_N concat ->!
+    <-RT_P "Postfix" <-RT_N concat ->!
+
+:Resize
+    @SetHelpButton
+
+:SetHelpButton
+    1 SetScreenMode
+
+    75 ->HelpX
+    30 ->HelpY
+
+    Self "main"
+        ScreenWidth 2.0 div <-HelpX sub neg 
+        ScreenHeight 2.0 div <-HelpY sub neg 
+        -250 SetImagePosition
+
+:MouseOnHelp # -
+    GetMouseScreenPixelPosition <-HelpY sub ->my <-HelpX sub ->mx
+    <-mx abs 30 lte <-my abs 13 lte and # return
+
+:MouseOnTab # - tabId (-1 no tab, -2 close)
+    GetMouseScreenPixelPosition ScreenHeight 2.0 div sub 256 sub ->my ScreenWidth 2.0 div sub 256 add 128 add ->mx
+    <-my 0 lt <-my 32 gt <-mx 0 lt or or if
+        -1 return
+    endif
+    <-Tabs GetListCount 0 do
+        <-mx I 1 add 64 mul lt if
+            I return
+        endif
+    loop
+    <-mx 256 3 mul lte <-mx 256 3 mul 64 sub gte and if
+        -2 return # close
+    endif
+    -1 return
+
+:ShowTab
+    1 SetScreenMode
+
+    <-Tabs <-CurrentTab GetListElement ->tab
+    6 0 do
+        I 3 mod 1 sub 256 mul ->x
+        I 3 div 0.5 sub 256 mul neg ->y
+        "tile" I concat ->name
+        Self <-name "Custom" "Index" <-tab concat <-! I add "Postfix" <-tab concat <-! concat concat SetImage
+        Self <-name <-x <-y -290 I add SetImagePosition
+        Self <-name 256 24.0 div 0.01 add dup SetImageScale
+    loop
+
+:Show
+    1 SetScreenMode
+
+    <-Tabs GetListCount 0 do
+        #I <-Tabs GetListCount 1 sub 2.0 div sub 64 mul ->x
+        256 128 add 32 sub neg I 64 mul add ->x
+        256 16 add ->y
+        <-Tabs I GetListElement ->name
+        Self <-name "Header" <-name concat <-! SetImage
+        Self <-name <-x <-y -270 I Add SetImagePosition
+        Self <-name 64 24.0 div 0.01 add dup SetImageScale
+    loop
+
+    Self "close" <-ImageClose SetImage
+    Self "close"
+        256 128 add 32 sub 
+        256 16 add
+        -270 SetImagePosition
+    Self "close" 64 24.0 div 0.01 add dup SetImageScale
+
+    @ShowTab
+
+    1 ->Shown
+    IsPaused ->WasPaused
+    PauseGame
+
+:Hide # bool (from awake) - 
+    ->fromAwake
+    1 SetScreenMode
+
+    <-Tabs GetListCount 0 do
+        <-Tabs I GetListElement ->name
+        Self <-name "none" SetImage
+    loop
+
+    6 0 do
+        "tile" I concat ->name
+        Self <-name "none" SetImage
+    loop
+
+    Self "close" "none" SetImage
+
+    <-fromAwake not <-WasPaused not and if
+        UnpauseGame
+    endif
+
+    0 ->Shown
+
+:Awake
+    Self "main" <-ImageHelp SetImage
+    Self "main" 64 24.0 div dup SetImageScale
+
+    Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
+    Self CONST_CREATEPZ 0 SetUnitAttribute
+    Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute
+    Self CONST_TAKEMAPSPACE 0 SetUnitAttribute
+    Self CONST_CONNECTABLE 0 SetUnitAttribute
+    Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+
+    1 SetScreenMode
+    0.5 0.5 SetScreenCoords
+    1 OperateWhilePaused
+
+    1 @Hide
+
+
