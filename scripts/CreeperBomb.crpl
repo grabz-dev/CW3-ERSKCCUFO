@@ -21,7 +21,7 @@ once
     Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
         Self "TeamFlag.crpl" AddScriptToUnit
     endif
-    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+    Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
 
     "AWAKE" ->G_sState
     @awake
