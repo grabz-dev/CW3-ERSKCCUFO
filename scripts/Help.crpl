@@ -5,6 +5,8 @@
 # Help script for CW3-GRSUFO template
 # Visit the Github: https://github.com/grabz-dev/CW3-ERSKCCUFO
 
+$DisplayInEdit:1 # display help in edit mode - when turned off, the core will sit in a corner of the map
+
 # disable/enable individual tabs, in case you don't use all the features
 $EnableKAGYU:1 # template "good lu" main board
 $EnableERS:1 # Enemy Radioactive Source
@@ -38,18 +40,20 @@ endonce
 endif
 
 0 GetMouseButtonDown if # left mouse button pressed
-    <-Shown if
-        @MouseOnTab ->tab
-        <-tab 0 gte if
-            <-tab ->CurrentTab
-            @ShowTab
-        endif
-        <-tab -2 eq @MouseOnHelp or if
-            0 @Hide
-        endif
-    else
-        @MouseOnHelp if
-            @Show
+    @CanShow if
+        <-Shown if
+            @MouseOnTab ->tab
+            <-tab 0 gte if
+                <-tab ->CurrentTab
+                @ShowTab
+            endif
+            <-tab -2 eq @MouseOnHelp or if
+                0 @Hide
+            endif
+        else
+            @MouseOnHelp if
+                @Show
+            endif
         endif
     endif
 endif
@@ -85,19 +89,24 @@ endif
     <-RT_I "Index" <-RT_N concat ->!
     <-RT_P "Postfix" <-RT_N concat ->!
 
+:CanShow # - b
+    IsEditMode not <-DisplayInEdit or return
+
 :Resize
     @SetHelpButton
 
 :SetHelpButton
-    1 SetScreenMode
+    @CanShow if
+        1 SetScreenMode
 
-    75 ->HelpX
-    30 ->HelpY
+        75 ->HelpX
+        30 ->HelpY
 
-    Self "main"
-        ScreenWidth 2.0 div <-HelpX sub neg 
-        ScreenHeight 2.0 div <-HelpY sub neg 
-        -250 SetImagePosition
+        Self "main"
+            ScreenWidth 2.0 div <-HelpX sub neg 
+            ScreenHeight 2.0 div <-HelpY sub neg 
+            -250 SetImagePosition
+    endif
 
 :MouseOnHelp # -
     GetMouseScreenPixelPosition <-HelpY sub ->my <-HelpX sub ->mx
@@ -159,7 +168,9 @@ endif
 
 :Hide # bool (from awake) - 
     ->fromAwake
-    1 SetScreenMode
+    @CanShow if
+        1 SetScreenMode
+    endif
 
     <-Tabs GetListCount 0 do
         <-Tabs I GetListElement ->name
@@ -182,6 +193,7 @@ endif
 :Awake
     Self "main" <-ImageHelp SetImage
     Self "main" 64 24.0 div dup SetImageScale
+    Self "main" 0 0 0 SetImagePosition
 
     Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
     Self CONST_CREATEPZ 0 SetUnitAttribute
@@ -190,8 +202,15 @@ endif
     Self CONST_CONNECTABLE 0 SetUnitAttribute
     Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
 
-    1 SetScreenMode
-    0.5 0.5 SetScreenCoords
+    @CanShow if
+        1 SetScreenMode
+        0.5 0.5 SetScreenCoords
+    else
+        0 SetScreenMode
+        # perhaps it is better to let the mapmaker move the core?
+        #Self CONST_COORDX 1 SetUnitAttribute
+        #Self CONST_COORDY 4 SetUnitAttribute
+    endif
     1 OperateWhilePaused
 
     1 @Hide

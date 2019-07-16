@@ -9,7 +9,7 @@ $Squences:"123,132"
 $EmitInterval:90 # creeper create interval, in frames
 $EmitAmount:250.0 # creeper created amount, in float creeper amount
 
-# internal comminucation: do not touch
+# internal communication: do not touch
 $IsBlindInhibitor:1
 #$InputSequence:[]
 $ImageInhibitor:"Custom4_128"
@@ -96,5 +96,7 @@ endif
     Self CONST_CELLWIDTH 7 SetUnitAttribute
     Self CONST_CELLHEIGHT 7 SetUnitAttribute
 
-    @SetText
+    @SetText pop
     @SetImage
+
+    1 OperateWhilePaused # only to make sure the image and text is set preperly when starting/loading map (before unpause)
