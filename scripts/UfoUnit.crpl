@@ -20,7 +20,8 @@ $ImageUnit:"Custom21"
 $ImageRing:"Custom22"
 $ImageRingFront:"Custom23"
 $ImageOffset:40 # "Custom[offset]" is collector
-$ImageRange:"Custom1_256"
+$ImageRange:"Custom4_256"
+$ImageLine:"Custom1pp"
 
 once
     ShowTraceLog
@@ -37,8 +38,8 @@ once
     "ammo" @CreateSlave ->AmmoSlave
     "health" @CreateSlave ->HealthSlave
 
-    @Awake
     @CreateImages
+    @Awake
 
     @TargetManagerInit
 
@@ -59,8 +60,22 @@ once
     @EnterRising
 endonce
 
+GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and ->MouseOver
+
 <-TargetRange 9000 lte if
     @HandleRangeImage
+endif
+
+<-MouseOver if
+    40 ->alphaChange
+else
+    -40 ->alphaChange
+endif
+<-LineAlpha 0 neq if
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
+    @RenderLine
+else
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
 endif
 
 IsPaused if
@@ -177,6 +192,16 @@ endif
     "Weapons4"   ->SOUND_INTAKE
     "Explosion7" ->SOUND_DESTROYED
 
+:RenderLine
+    CurrentPixelCoords ->cy ->cx
+    <-CreatedBy CONST_PIXELCOORDX GetUnitAttribute <-cx sub ->rx
+    <-CreatedBy CONST_PIXELCOORDY GetUnitAttribute <-cy sub ->ry
+
+    Self "line" <-rx 2.0 div <-ry 2.0 div -60 SetImagePosition
+    Self "line" <-ry <-rx atan2 SetImageRotation
+    Self "line" <-rx <-ry 0 0 Distance 24.0 div 0.1 SetImageScale
+    Self "line" 32 224 224 <-LineAlpha SetImageColor
+
 :TargetManagerInit
     -1 ->TargetManager
     "IsUfoManager" 1 GetCoresWithVar 0 do
@@ -205,7 +230,7 @@ endif
     <-TargetManager "UfoManager.crpl" "Queue" <-Queue 1 add SetScriptVar
 
 :HandleRangeImage
-    GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and if
+    <-MouseOver if
         Self "range" 255 255 255 255 SetImageColor
         Self "range" <-riseLevel neg SetImagePositionY
     else
@@ -805,6 +830,9 @@ endif
     Self "shadow" 1.35 dup SetImageScale
     Self "shadow" 0 0 0 128 SetImageColor
 
+    Self "line" <-ImageLine SetImage
+    Self "line" 0 0 SetImageScale
+
     <-RINGS 0 do
         "back" I concat ->name
         Self <-name <-ImageRing SetImage
@@ -845,6 +873,9 @@ endif
     <-HealthSlave "main" "none" SetImage
     
     1 OperateWhilePaused
+
+    0 ->LineAlpha
+    @RenderLine
 
 :Destroyed
     <-CreatedBy "UfoMaker.crpl" "Busy" SetScriptVar(<-CreatedBy "UfoMaker.crpl" "Busy" GetScriptVar 1 sub)
