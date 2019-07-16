@@ -214,5 +214,6 @@ endif
     1 OperateWhilePaused
 
     1 @Hide
+    @Resize
 
 

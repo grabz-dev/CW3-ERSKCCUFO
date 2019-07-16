@@ -33,8 +33,9 @@ $ImageInfinite:"Custom27"
 $ImageUfosOffset:28
 
 #unit images
-$ImageRainmaker:"Custom64" # hand-write custom target images
 $ImageOffset:40 # "Custom[offset]" is collector
+$ImageRainmaker:"Custom64" # hand-write custom target images
+$ImageFlipEmiter:"Custom65"
 
 once
     ShowTraceLog
@@ -107,8 +108,10 @@ endif
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
+    "Custom" <-ImageOffset 21 add concat ->IMG_ANTIEMITTER
     
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
+    <-ImageFlipEmiter "IMG_CRPLCORE:FlipEmitter" ->!
 
     <-UfosSpawned CreateListStartingSize ->OffsetsX
     <-UfosSpawned CreateListStartingSize ->OffsetsY
@@ -169,7 +172,6 @@ endif
         <-ufo "UfoUnit.crpl" "OffsetY" <-OffsetsY I GetListElement SetScriptVar
     loop
     <-UfosSpawned ->Busy
-
 
 :SetText
     <-Busy 0 gt if

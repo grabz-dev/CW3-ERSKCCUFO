@@ -152,6 +152,7 @@ endif
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
+    "Custom" <-ImageOffset 21 add concat ->IMG_ANTIEMITTER
 
     12 ->IMAGE_SIZE
     0 ->IMAGE_NAME
@@ -651,12 +652,32 @@ endif
             <-AbductedVals <-Target <-AbductedScript <-AbductedVars I GetListElement GetScriptVar AppendToList
         loop
     endif
+    <-Target GetUnitType "ANTIEMITTER" eq if
+        #<-Target CONST_CREATEPZ 0 SetUnitAttribute does work
+        <-Target 0 "STARTTIME" GetScriptVar ->AE_STARTTIME
+        <-Target 0 "PRODUCTIONINTERVAL" GetScriptVar ->AE_SPRODUCTIONINTERVAL
+        <-Target 0 "PRODUCTIONAMT" GetScriptVar ->AE_PRODUCTIONAMT
+        <-Target CONST_COORDX GetUnitAttribute ->TargetX
+        <-Target CONST_COORDY GetUnitAttribute ->TargetY
+    endif
     # move CN so it doesn't show the ascend animation
     <-AbductedType "COMMANDNODE" eq if
         <-Target CONST_PIXELCOORDX 10000 SetUnitAttribute
     endif
     <-Target @TargetManagerRelease
     <-Target 0 @SafeDestroy
+
+    <-AbductedType "ANTIEMITTER" eq if
+        0 ->destroyed
+        <-TargetX <-TargetY 0 1 GetAllUnitsInRange 0 do
+            dup GetUnitType "POWERZONE" eq <-destroyed not and if
+                0 Destroy # destroy the created PZ
+                1 ->destroyed # simple "break" would leave trash on the stack
+            else
+                pop
+            endif
+        loop
+    endif
 
     <-RINGS 2 mul ->beamAnim
     <-SOUND_BEAMUP PlaySound
@@ -754,10 +775,14 @@ endif
                 <-AbductedVars GetListCount 0 do
                     <-uid <-AbductedScript <-AbductedVars I GetListElement <-AbductedVals I GetListElement SetScriptVar
                 loop
-            else
+            else <-AbductedType "ANTIEMITTER" eq if
+                <-uid 0 "STARTTIME" <-AE_STARTTIME SetScriptVar
+                <-uid 0 "PRODUCTIONINTERVAL" <-AE_SPRODUCTIONINTERVAL SetScriptVar
+                <-uid 0 "PRODUCTIONAMT" <-AE_PRODUCTIONAMT SetScriptVar
+            else # player unit
                 <-uid CONST_ISBUILDING 0 SetUnitAttribute
                 <-uid CONST_HEALTH SetUnitAttribute(<-uid CONST_MAXHEALTH GetUnitAttribute)
-            endif
+            endif endif
         endif
         "" ->AbductedType
     endif
