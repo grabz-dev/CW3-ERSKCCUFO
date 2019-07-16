@@ -128,4 +128,5 @@ Wrong setting can resolve in an unpassable map, so make sure that the keys are s
 A menu with description of each componet, each tab has a space of 768x512 pixels backed by 6 256x256 images. Adding new tabs is done easily in the Help.crpl script, at least until the template runs out of 265x256 image slots, which will probably be soon.
 
 ### Help.crpl
+   * *DisplayInEdit* - When set to 0, the core will not be in screen mode and will not work. Automaticly fixed when finalized.
    * *Enable[Tab]* - Enables individual help tabs. Useful when you use only some custom units from the template in a map.
