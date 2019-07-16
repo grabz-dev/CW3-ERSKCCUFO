@@ -14,6 +14,7 @@ $EnableUFO:1 # a cute alien muffin
 $EnableKCC:1 # Kajacx Creeper Cloud
 $EnableCCB:1 # Controllable Creeper Bomb
 $EnableSBI:1 # Semi-Blind Inhibitor
+$EnableFFE:1 # Flip Flip Emitter
 
 $ImageHelp:"Custom2pp"
 $ImageClose:"Custom3pp"
@@ -73,6 +74,7 @@ endif
     "KCC" "Custom7pp" 4 "_256pp" @RegisterTab
     "CCB" "Custom8pp" 22 "_256pp" @RegisterTab
     "SBI" "Custom9pp" 22 "_256" @RegisterTab
+    "FFE" "Custom10pp" 10 "_256" @RegisterTab
 
 :RegisterTab # Name Header Index Postfix
     ->RT_P
