@@ -9,7 +9,7 @@ $IsFriendly:0
 
 # rendering images
 #$ImageList:[] # list of image names
-#$Image[name]:"" # image name to image name (kek)
+#$Image_[name]:"" # image name to image name (kek)
 
 # values for replicatig
 $ScriptName:""

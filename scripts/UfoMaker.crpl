@@ -23,7 +23,7 @@ $StarOffset:1
 # Images
 $ImageMain:"Custom20"
 $ImageLine:"Custom1pp"
-$ImageRange:"Custom1_256"
+$ImageRange:"Custom4_256"
 
 # config flag images
 $ImageClosest:"Custom24"
@@ -33,8 +33,9 @@ $ImageInfinite:"Custom27"
 $ImageUfosOffset:28
 
 #unit images
-$ImageRainmaker:"Custom64" # hand-write custom target images
 $ImageOffset:40 # "Custom[offset]" is collector
+$ImageRainmaker:"Custom64" # hand-write custom target images
+$ImageFlipEmiter:"Custom65"
 
 once
     ShowTraceLog
@@ -42,6 +43,7 @@ once
     HideTraceLog
 
     <-UfosSpawned 1 max 5 min ->UfosSpawned
+    CreateList ->ActiveUfos
 
     @Awake
     @DefineConstants
@@ -54,11 +56,25 @@ once
     Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
         Self "TeamFlag.crpl" AddScriptToUnit
     endif
-    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+    Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
 endonce
+
+GetMouseCell CurrentCoords Distance 2.9 lte ->MouseOver
 
 <-TargetRange 9000 lte if
     @HandleRangeImage
+endif
+
+<-MouseOver if
+    40 ->alphaChange
+else
+    -40 ->alphaChange
+endif
+<-LineAlpha 0 neq if
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
+    @RenderLines
+else
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
 endif
 
 IsPaused if
@@ -107,8 +123,10 @@ endif
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
+    "Custom" <-ImageOffset 21 add concat ->IMG_ANTIEMITTER
     
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
+    <-ImageFlipEmiter "IMG_CRPLCORE:FlipEmitter" ->!
 
     <-UfosSpawned CreateListStartingSize ->OffsetsX
     <-UfosSpawned CreateListStartingSize ->OffsetsY
@@ -147,8 +165,30 @@ endif
         <-OffsetsY 4 0.0 SetListElement
     endif
 
+:RenderLines
+    CurrentPixelCoords ->cy ->cx
+    0 ->i
+    while <-i <-ActiveUfos GetListCount lt repeat
+        <-ActiveUfos <-i GetListElement ->ufo
+        "uline" <-ufo concat ->name
+        <-ufo CONST_ISDESTROYED GetUnitAttribute if
+            Self <-name "none" SetImage
+            <-ActiveUfos <-i RemoveListElement
+        else
+            <-ufo CONST_PIXELCOORDX GetUnitAttribute <-cx sub ->rx
+            <-ufo CONST_PIXELCOORDY GetUnitAttribute <-cy sub ->ry
+
+            Self <-name <-rx 2.0 div <-ry 2.0 div -60 SetImagePosition
+            Self <-name <-ry <-rx atan2 SetImageRotation
+            Self <-name <-rx <-ry 0 0 Distance 24.0 div 0.1 SetImageScale
+            Self <-name 32 224 224 <-LineAlpha SetImageColor
+
+            <-i 1 add ->i
+        endif
+    endwhile
+
 :HandleRangeImage
-    GetMouseCell CurrentCoords Distance 2.9 lte if
+    <-MouseOver if
         Self "range" 255 255 255 255 SetImageColor
     else
         Self "range" 0 0 0 0 SetImageColor
@@ -167,9 +207,12 @@ endif
         <-ufo "UfoUnit.crpl" "TargetRange" <-TargetRange SetScriptVar
         <-ufo "UfoUnit.crpl" "OffsetX" <-OffsetsX I GetListElement SetScriptVar
         <-ufo "UfoUnit.crpl" "OffsetY" <-OffsetsY I GetListElement SetScriptVar
+
+        Self "uline" <-ufo concat <-ImageLine SetImage
+        Self "uline" <-ufo concat 0 0 SetImageScale
+        <-ActiveUfos <-ufo AppendToList
     loop
     <-UfosSpawned ->Busy
-
 
 :SetText
     <-Busy 0 gt if
@@ -288,3 +331,6 @@ endif
     32 SetTextY
 
     1 OperateWhilePaused
+
+    0 ->LineAlpha
+    @RenderLines

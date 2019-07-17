@@ -4,6 +4,7 @@
 
 #GarbageList:[]
 $IsUfoManager:1
+$Queue:0 # length of "queue" for searching
 
 once
     ShowTraceLog
@@ -19,6 +20,8 @@ endonce
     <-GarbageList 0 GetListElement --? #refdelete
     <-GarbageList 0 RemoveListElement
 loop
+
+<-Queue 1 sub 0 max ->Queue # process 1 ufo in queue per frame
 
 :Awake
     Self "main" "none" SetImage

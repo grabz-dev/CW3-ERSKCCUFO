@@ -20,7 +20,8 @@ $ImageUnit:"Custom21"
 $ImageRing:"Custom22"
 $ImageRingFront:"Custom23"
 $ImageOffset:40 # "Custom[offset]" is collector
-$ImageRange:"Custom1_256"
+$ImageRange:"Custom4_256"
+$ImageLine:"Custom1pp"
 
 once
     ShowTraceLog
@@ -37,8 +38,8 @@ once
     "ammo" @CreateSlave ->AmmoSlave
     "health" @CreateSlave ->HealthSlave
 
-    @Awake
     @CreateImages
+    @Awake
 
     @TargetManagerInit
 
@@ -59,8 +60,22 @@ once
     @EnterRising
 endonce
 
+GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and ->MouseOver
+
 <-TargetRange 9000 lte if
     @HandleRangeImage
+endif
+
+<-MouseOver if
+    40 ->alphaChange
+else
+    -40 ->alphaChange
+endif
+<-LineAlpha 0 neq if
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
+    @RenderLine
+else
+    <-LineAlpha <-alphaChange add 0 max 255 min ->LineAlpha
 endif
 
 IsPaused if
@@ -152,6 +167,7 @@ endif
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
+    "Custom" <-ImageOffset 21 add concat ->IMG_ANTIEMITTER
 
     12 ->IMAGE_SIZE
     0 ->IMAGE_NAME
@@ -176,6 +192,16 @@ endif
     "Weapons4"   ->SOUND_INTAKE
     "Explosion7" ->SOUND_DESTROYED
 
+:RenderLine
+    CurrentPixelCoords ->cy ->cx
+    <-CreatedBy CONST_PIXELCOORDX GetUnitAttribute <-cx sub ->rx
+    <-CreatedBy CONST_PIXELCOORDY GetUnitAttribute <-cy sub ->ry
+
+    Self "line" <-rx 2.0 div <-ry 2.0 div -60 SetImagePosition
+    Self "line" <-ry <-rx atan2 SetImageRotation
+    Self "line" <-rx <-ry 0 0 Distance 24.0 div 0.1 SetImageScale
+    Self "line" 32 224 224 <-LineAlpha SetImageColor
+
 :TargetManagerInit
     -1 ->TargetManager
     "IsUfoManager" 1 GetCoresWithVar 0 do
@@ -199,8 +225,12 @@ endif
     <-TargetManager "UfoManager.crpl" <-TM_Uid 0 SetScriptVar
     <-TargetManager "UfoManager.crpl" "GarbageList" GetScriptVar <-TM_Uid AppendToList
 
+:GetAndIncreaseQueue # -
+    <-TargetManager "UfoManager.crpl" "Queue" GetScriptVar ->Queue
+    <-TargetManager "UfoManager.crpl" "Queue" <-Queue 1 add SetScriptVar
+
 :HandleRangeImage
-    GetMouseCell CurrentCoords Distance 2.9 lte <-fallThru not and if
+    <-MouseOver if
         Self "range" 255 255 255 255 SetImageColor
         Self "range" <-riseLevel neg SetImagePositionY
     else
@@ -297,6 +327,7 @@ endif
 :EnterSearching
     RandFloat 0.5 sub ->VX
     RandFloat 0.5 sub ->VY
+    @GetAndIncreaseQueue
     <-STATE_SEARCHING ->State
 
 :ProcessSearching
@@ -304,6 +335,11 @@ endif
         return
     endif
 
+    <-Queue neq0 if
+        <-Queue 1 sub ->Queue
+        return
+    endif
+    
     <-TargetClosest if
         # find closest target
         999999999 ->best
@@ -340,6 +376,9 @@ endif
     <-Target -1 neq if
         <-Target @TargetManagerClaim
         @EnterMoving
+    else
+        # target not found - requeue
+        @GetAndIncreaseQueue
     endif
 
 :EnterMoving
@@ -638,12 +677,32 @@ endif
             <-AbductedVals <-Target <-AbductedScript <-AbductedVars I GetListElement GetScriptVar AppendToList
         loop
     endif
+    <-Target GetUnitType "ANTIEMITTER" eq if
+        #<-Target CONST_CREATEPZ 0 SetUnitAttribute does work
+        <-Target 0 "STARTTIME" GetScriptVar ->AE_STARTTIME
+        <-Target 0 "PRODUCTIONINTERVAL" GetScriptVar ->AE_SPRODUCTIONINTERVAL
+        <-Target 0 "PRODUCTIONAMT" GetScriptVar ->AE_PRODUCTIONAMT
+        <-Target CONST_COORDX GetUnitAttribute ->TargetX
+        <-Target CONST_COORDY GetUnitAttribute ->TargetY
+    endif
     # move CN so it doesn't show the ascend animation
     <-AbductedType "COMMANDNODE" eq if
         <-Target CONST_PIXELCOORDX 10000 SetUnitAttribute
     endif
     <-Target @TargetManagerRelease
     <-Target 0 @SafeDestroy
+
+    <-AbductedType "ANTIEMITTER" eq if
+        0 ->destroyed
+        <-TargetX <-TargetY 0 1 GetAllUnitsInRange 0 do
+            dup GetUnitType "POWERZONE" eq <-destroyed not and if
+                0 Destroy # destroy the created PZ
+                1 ->destroyed # simple "break" would leave trash on the stack
+            else
+                pop
+            endif
+        loop
+    endif
 
     <-RINGS 2 mul ->beamAnim
     <-SOUND_BEAMUP PlaySound
@@ -741,10 +800,14 @@ endif
                 <-AbductedVars GetListCount 0 do
                     <-uid <-AbductedScript <-AbductedVars I GetListElement <-AbductedVals I GetListElement SetScriptVar
                 loop
-            else
+            else <-AbductedType "ANTIEMITTER" eq if
+                <-uid 0 "STARTTIME" <-AE_STARTTIME SetScriptVar
+                <-uid 0 "PRODUCTIONINTERVAL" <-AE_SPRODUCTIONINTERVAL SetScriptVar
+                <-uid 0 "PRODUCTIONAMT" <-AE_PRODUCTIONAMT SetScriptVar
+            else # player unit
                 <-uid CONST_ISBUILDING 0 SetUnitAttribute
                 <-uid CONST_HEALTH SetUnitAttribute(<-uid CONST_MAXHEALTH GetUnitAttribute)
-            endif
+            endif endif
         endif
         "" ->AbductedType
     endif
@@ -766,6 +829,9 @@ endif
     Self "shadow" -10 SetImagePositionZ
     Self "shadow" 1.35 dup SetImageScale
     Self "shadow" 0 0 0 128 SetImageColor
+
+    Self "line" <-ImageLine SetImage
+    Self "line" 0 0 SetImageScale
 
     <-RINGS 0 do
         "back" I concat ->name
@@ -807,6 +873,9 @@ endif
     <-HealthSlave "main" "none" SetImage
     
     1 OperateWhilePaused
+
+    0 ->LineAlpha
+    @RenderLine
 
 :Destroyed
     <-CreatedBy "UfoMaker.crpl" "Busy" SetScriptVar(<-CreatedBy "UfoMaker.crpl" "Busy" GetScriptVar 1 sub)

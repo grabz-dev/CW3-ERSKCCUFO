@@ -99,7 +99,9 @@ Possible units types for *TargetOnly*:
    * STRATERAIR
    * BOMBERAIR
    * COMMANDNODE
+   * ANTIEMITTER
    * CRPLCORE:CloudMaker
+   * CRPLCORE:FlipEmitter
 
 ## Creeper Bomb
 This unit keeps Creeper or AC inside, until it is released when the timer runs out. Connecting the core of the bomb will allow ammo transfer. Each ammo packet delivered to the core will increase the timer (for Creeper) or decrease the timer (for AC).
@@ -109,3 +111,36 @@ This unit keeps Creeper or AC inside, until it is released when the timer runs o
    * *Radius* - The radius of the bomb.
    * *Amt* - The amount of Creeper held inside. Negative values hold Anti-Creeper.
    * *TimeChangePerPacket* - Can only be positive. The amount of time reduced from (for Creeper) or added to (for AC) the timer, in frames.
+
+## Blind Inhibitor
+A "hidden" inhibitor that will spawn only after player collects shield keys. Any number of shield keys is possible (1, 2, 3, 4, ...), and for each order of key collection a different inhibitor can spawn, and 1 inhibitor can have multiple combinations. The player will see "blind" inhibitors as being semi-transparent with possible combinations above them as well as numbers above keys, so they will know which keys to collect in order to spawn which inhibitor.
+
+Wrong setting can resolve in an unpassable map, so make sure that the keys are set correctly. If some inhibitor sequences are missing, then the inhibitor might not spawn, and if some sequence is duplicated, then multiple inhibitors might spawn, eigter way the player can still win, however the keys must be set properly.
+
+### BlindInhibitor.crpl
+   * *Squences* - Which key sequences wil lactivate this inhibitor, separated by comma. Examples: "12" or "123,231,312".
+   * *EmitInterval* - Creeper spawn interval of the created inhibitor, in frames (1 second = 30 frames).
+   * *EmitAmount* - Amount of creeper produce, float creeper value, like in unit editor.
+
+### BlindKey.crpl
+   Place and always keep under a shield key (on the same cell).
+   * *KeyNumber* - Number of this key for the inhibitor sequence.
+   
+## FFE - Flip Flop Emitter
+Modified flipemitter from CMS, flood with opposing C/AC to switch teams. Both UFOs and Rainclouds can target flipmitters from the opposing team, but only active ones.
+
+### FlipEmitter.crpl
+   * *Camt* - Creeper created.
+   * *ACamt* - Anti-creeper created, use negative values for AC.
+   * *Cinterval* - Creeper production interval, in frames.
+   * *ACinterval* - Anti-creeper production interval, in frames.
+   * *StartDelay* - Wait this many frames before starting to produce.
+   * *StartAsCreeper* - 1 to start as creeper-producing flipmitter, 0 to start as AC producing.
+   * *Thresh* - Flooding threshold, this much C/AC is needed to flip this flipmitter.
+
+## Help Menu
+A menu with description of each componet, each tab has a space of 768x512 pixels backed by 6 256x256 images. Adding new tabs is done easily in the Help.crpl script, at least until the template runs out of 265x256 image slots, which will probably be soon.
+
+### Help.crpl
+   * *DisplayInEdit* - When set to 0, the core will not be in screen mode and will not work. Automaticly fixed when finalized.
+   * *Enable[Tab]* - Enables individual help tabs. Useful when you use only some custom units from the template in a map.
