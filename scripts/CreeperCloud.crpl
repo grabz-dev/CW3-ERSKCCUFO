@@ -16,6 +16,9 @@ $ImageRainFill:"Custom14"
 $ImageRainBorder:"Custom15"
 
 $Progress:0.0 # changed from other script (can be negative for anticreep!)
+$CreatedByUfo:0
+
+$IsCreeperCloud:1
 
 once
     ShowTraceLog
@@ -27,6 +30,10 @@ once
     endif
     <-Progress 0 gt ->Enemy # is enemy
 
+    # store UFO flag into a copy and set the original to 1 so it is set when returned from UFO
+    <-CreatedByUfo ->WasCreatedByUfo
+    1 ->CreatedByUfo
+
     @CreateImages
     @InitUnitTypes
     @Awake
@@ -35,12 +42,16 @@ once
     Self CONST_HEALTH <-MaxHealth SetUnitAttribute
 
     <-MaxPayload 0 gte if
+        <-WasCreatedByUfo not if
+            # only set payload to max when created by UFO
+            # otherwise leave it as it is, UFO will remember and set it
+            <-MaxPayload ->payload
+        endif
+
         Self CONST_MAXAMMO <-MaxPayload SetUnitAttribute
         Self CONST_MAXAMMOAC <-MaxPayload SetUnitAttribute
-        Self CONST_AMMO <-MaxPayload SetUnitAttribute
-        Self CONST_AMMOAC <-MaxPayload SetUnitAttribute
-        
-        <-MaxPayload ->payload
+        Self CONST_AMMO <-payload SetUnitAttribute
+        Self CONST_AMMOAC <-payload SetUnitAttribute
     endif
     
     0 ->built
@@ -52,6 +63,33 @@ once
     CurrentCoords CellToPixel ->startY ->startX
     
     -1 ->target
+
+	#Initialize team flag
+	Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar eq0 if
+		Self "TeamFlag.crpl" AddScriptToUnit
+	endif
+	Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar # this will be set once the cloud rises
+
+	# images for UFO
+	Self "TeamFlag.crpl" "ImageList" CreateList
+		dup "fill" AppendToList
+		dup "border" AppendToList
+		SetScriptVar
+	Self "TeamFlag.crpl" "Image_fill" <-ImageCloudFill SetScriptVar
+	Self "TeamFlag.crpl" "Image_border" <-ImageCloudBorder SetScriptVar
+
+	# script replication for UFO
+	Self "TeamFlag.crpl" "ScriptName" "CreeperCloud" SetScriptVar
+	Self "TeamFlag.crpl" "SavedVariables" CreateList
+		dup "Progress" AppendToList
+		dup "CreatedByUfo" AppendToList
+		dup "payload" AppendToList
+		dup "MaxHealth" AppendToList
+		dup "RainAmount" AppendToList
+		dup "Speed" AppendToList
+		dup "MaxPayload" AppendToList
+		dup "MaxRange" AppendToList
+		SetScriptVar
 endonce
 
 #update
@@ -129,7 +167,10 @@ endonce
 else
     <-Progress abs 1 gte if
         1 ->built
-        1 ->Progress
+        <-Progress 0 Round ->Progress # ghetto "sign" function
+        <-Enemy not if
+	        Self "TeamFlag.crpl" "CanUfoTarget" 1 SetScriptVar # make this cloud targetable by UFO
+        endif
         @Awake
     endif
     
@@ -256,10 +297,12 @@ endif
     <-uid
 
 :Aggro
-    -?AGGRO not if
-        <-Rainmaker "CloudMaker.crpl" "ReadyFlag" 1 SetScriptVar
-        1 ->AGGRO
+    <-WasCreatedByUfo not if
+        -?AGGRO not if
+            <-Rainmaker "CloudMaker.crpl" "ReadyFlag" 1 SetScriptVar
+        endif
     endif
+    1 ->AGGRO
     
 :CreateImages
     Self RemoveImages

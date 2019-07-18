@@ -6,6 +6,7 @@
 $TeamFlagAttached:1
 $IsEnemy:0
 $IsFriendly:0
+$CanUfoTarget:0 # special flag for UFO, not the same as "IsFriendly" (can enemy cloud attack)
 
 # rendering images
 #$ImageList:[] # list of image names

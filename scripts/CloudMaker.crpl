@@ -211,11 +211,13 @@ endif
     <-creeper 0 gte if
         Self CONST_COUNTSFORVICTORY 1 SetUnitAttribute
         Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
-        Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar
+        Self "TeamFlag.crpl" "IsFriendly" <-creeper neq0 SetScriptVar # enable enemy target on 0 creeper, but only for rainclouds
+        Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar
     else
         Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute
         Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
         Self "TeamFlag.crpl" "IsFriendly" 1 SetScriptVar
+        Self "TeamFlag.crpl" "CanUfoTarget" 1 SetScriptVar
     endif
     
 :SetCreeperRGB # (setrs the color into variables R G B)

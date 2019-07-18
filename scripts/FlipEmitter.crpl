@@ -37,6 +37,7 @@ Once
 	endif
 	Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar # this will be set once the emitter activates
 	Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar # this will be set once the emitter activates
+	Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar # this will be set once the emitter activates
 
 	# images for UFO
 	Self "TeamFlag.crpl" "ImageList" CreateList
@@ -146,6 +147,7 @@ endif
 	endif
 	Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
 	Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar
+    Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar
 	<-Cinterval 2 sub Delay
 		
 #AC production function.
@@ -159,4 +161,5 @@ endif
 	endif
 	Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
 	Self "TeamFlag.crpl" "IsFriendly" 1 SetScriptVar
+    Self "TeamFlag.crpl" "CanUfoTarget" 1 SetScriptVar
 	<-ACinterval 2 sub Delay
