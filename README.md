@@ -73,7 +73,7 @@ UFO Unit Settings:
    * *Speed* - UFO movement speed, in pixels per frame. 1 cell per second is approx 0.5 pixels per frame.
    * *BeamHealth* - The amount of "shields" - damage needed from bams to make the UFO fall down.
    * *SniperHealth* - The (real) health of the UFO, this can only be damaged by snipers when fallen and doesn't regenerate.
-   * *TargetOnly* - Make UFO target only a specific unit type. List of avaliable types below.
+   * *TargetOnly* - Make UFO target only a specific unit type(s). Separate by comma. List of avaliable types below.
    * *TargetClosest* - 1 to target closest possible target, 0 to target random target. UFO always has infinite range.
    * *TargetRange* - UFO unit target range, in cell radius around the UFO. Use 9999 for infinite range.
    
@@ -102,6 +102,7 @@ Possible units types for *TargetOnly*:
    * ANTIEMITTER
    * CRPLCORE:CloudMaker
    * CRPLCORE:FlipEmitter
+   * CRPLCORE:CreeperCloud
 
 ## Creeper Bomb
 This unit keeps Creeper or AC inside, until it is released when the timer runs out. Connecting the core of the bomb will allow ammo transfer. Each ammo packet delivered to the core will increase the timer (for Creeper) or decrease the timer (for AC).
