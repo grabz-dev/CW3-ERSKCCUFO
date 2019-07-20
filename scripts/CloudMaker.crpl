@@ -221,6 +221,13 @@ endif
         Self "TeamFlag.crpl" "IsFriendly" 1 SetScriptVar
         Self "TeamFlag.crpl" "CanUfoTarget" 1 SetScriptVar
     endif
+
+    # rainmaker not ready - do not target
+    GetGameTimeFrames <-waittime lt if
+        Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
+        Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar
+        Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar
+    endif
     
 :SetCreeperRGB # (setrs the color into variables R G B)
     <-TeamLock neq0 if

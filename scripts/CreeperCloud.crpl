@@ -119,7 +119,14 @@ endonce
         #add creeper
         CurrentCoords 6 add GetTerrain -1 neq if
             <-rain <-RainImgs gt if
-                CurrentCoords 6 add <-RainAmount <-Enemy not if neg endif AddCreeper
+                # add C/AC
+                CurrentCoords 6 add GetCreeper ->creeperAmt
+                <-Enemy if
+                    <-creeperAmt <-RainAmount add  2147 min ->creeperAmt
+                else
+                    <-creeperAmt <-RainAmount sub -2147 max ->creeperAmt
+                endif
+                CurrentCoords 6 add <-creeperAmt SetCreeper
             
                 # handle C/AC drain
                 <-MaxPayload neq0 if
@@ -145,7 +152,13 @@ endonce
 
     # try find the target
     <-target -1 eq if
-        @FindTarget ->target
+        <-SearchFrame -1 eq if
+            @AllocateSearchFrame
+        endif
+        GetGameTimeFrames <-SearchFrame gte if
+            @FindTarget ->target
+            -1 ->SearchFrame
+        endif
     endif
 
     #if target exists, move to target
@@ -303,6 +316,48 @@ endif
         endif
     endif
     1 ->AGGRO
+
+:InitQueueList
+    -?KCC_Synchronized not if
+        # list is not shared
+
+        -?QueueList not if
+            # queue is not created - new cloud as opposed to save load
+
+            CreateList ->QueueList # default fallback in case of first cloud
+            <-QueueList 0 AppendToList
+
+            "KCC_Synchronized" 1 GetCoresWithVar 0 do #read from other cloud in case of new cloud
+                dup Self neq if
+                    "CreeperCloud.crpl" "QueueList" GetScriptVar ->QueueList # copy list from the core
+                else
+                    pop
+                endif
+            loop
+
+            1 ->KCC_Synchronized
+            # now all is done, eigter:
+            # first cloud: then new Queue list is created
+            # or existing cloud: then the Queue is simply copied from another cloud
+        else
+            # queue list exists but not synchronized - synchronize to other clouds
+            "IsCreeperCloud" 1 GetCoresWithVar 0 do
+                dup "CreeperCloud.crpl" "QueueList" <-QueueList SetScriptVar
+                    "CreeperCloud.crpl" "KCC_Synchronized"        1 SetScriptVar
+            loop
+        endif
+
+        <-QueueList 
+    endif
+
+    # make sure this gets deleted on save&load
+    "KCC_Synchronized" NotPersist
+
+    -1 ->SearchFrame # on which frame can the cloud seach for units
+
+:AllocateSearchFrame
+    <-QueueList 0 GetListElement GetGameTimeFrames max ->SearchFrame
+    <-QueueList 0 <-SearchFrame 1 add SetListElement
     
 :CreateImages
     Self RemoveImages
@@ -358,6 +413,7 @@ endif
     0 OperateWhilePaused
     Self CONST_DESTROYMODE 1 SetUnitAttribute
     @Recolor
+    @InitQueueList
     
 :Destroy
     @Aggro
