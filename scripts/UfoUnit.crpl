@@ -9,7 +9,7 @@ $SniperHealth:300.0
 # set by creator
 $CreatedBy:-1 # creatorUID
 $Speed:2.0 # movement speed, pixels per frame
-$TargetOnly:"" # only target slected unit, leave blank for all targets
+#$TargetOnlyList:[] # only target slected unit, leave blank for all targets
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
 $TargetRange:9999 # max cell range (radius), use 9999 for infitite
 $OffsetX:0.0
@@ -52,9 +52,13 @@ once
     #"CRPLCORE" CurrentCoords CreateUnit dup "CloudMaker.crpl" AddScriptToUnit ->Target
     ### DEVELOPMENT ###
     
-    <-TargetOnly "CRPLCORE:" StartsWith if
-        <-TargetOnly 9 <-TargetOnly StringLength 9 sub SubString ->TargetScript
-    endif
+    CreateList ->TargetScripts
+    <-TargetOnlyList GetListCount 0 do
+        <-TargetOnlyList I GetListElement ->tar
+        <-tar 0 9 SubString "CRPLCORE:" eq if
+            <-TargetScripts AppendToList(<-tar 9 <-tar StringLength 9 sub SubString)
+        endif
+    loop
 
     1 ->firstRising
     @EnterRising
@@ -163,7 +167,7 @@ endif
 
     "Custom" <-ImageOffset 16 add concat ->IMG_BERTHA
     "Custom" <-ImageOffset 17 add concat ->IMG_GUPPYAIR
-    "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
+    "Custom" <-ImageOffset 18 add concat ->IMG_STRAFERAIR
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
@@ -392,7 +396,7 @@ endif
     endif
 
     # find new target if current one gets destroyed
-    <-Target CONST_ISDESTROYED GetUnitAttribute if
+    @IsTargetValid not if
         <-STATE_SEARCHING ->State
         return
     endif
@@ -416,6 +420,19 @@ endif
         Self CONST_PIXELCOORDY <-cy add(<-VY) SetUnitAttribute
     endif
 
+:IsTargetValid
+    <-Target CONST_ISDESTROYED GetUnitAttribute if
+        0 return
+    endif
+
+    <-Target GetUnitType "CRPLCORE" eq if
+        <-Target "TeamFlag.crpl" "CanUfoTarget" GetScriptVar not if
+            0 return
+        endif
+    endif
+
+    1 return
+
 :IsUnitValidTarget # uid - bool
     ->uid
     <-uid @TargetManagerCheck not if
@@ -423,12 +440,19 @@ endif
     endif
 
     <-uid GetUnitType ->type
-    <-TargetOnly "" neq if 
-        <-TargetOnly "CRPLCORE:" StartsWith if
-            <-uid <-TargetScript ".crpl" concat "Is" <-TargetScript concat GetScriptVar
-            <-uid "TeamFlag.crpl" "IsFriendly" GetScriptVar and return
+    <-TargetOnlyList GetListCount neq0 if
+        <-type "CRPLCORE" eq if
+            0 # is valid script?
+            <-TargetScripts GetListCount 0 do
+                <-TargetScripts I GetListElement ->scr
+                <-uid <-scr ".crpl" concat "Is" <-scr concat GetScriptVar or # is valid script
+            loop
+            <-uid "TeamFlag.crpl" "CanUfoTarget" GetScriptVar and return
         else
-            <-type <-TargetOnly eq
+            0 # is unit valid type?
+            <-TargetOnlyList GetListCount 0 do
+                <-TargetOnlyList I GetListElement <-type eq or # is valid type
+            loop
             <-uid CONST_ISBUILDING GetUnitAttribute not
             and return
         endif
@@ -436,7 +460,7 @@ endif
         "IMG_" <-type concat -?! if
             <-uid CONST_ISBUILDING GetUnitAttribute not return
         endif
-        <-uid "TeamFlag.crpl" "IsFriendly" GetScriptVar if
+        <-uid "TeamFlag.crpl" "CanUfoTarget" GetScriptVar if
             1 return
         endif
     endif
@@ -848,7 +872,7 @@ endif
     <-TargetRange 9000 lte if
         Self "range" <-ImageRange SetImage
         Self "range" <-TargetRange 1.5 div dup SetImageScale
-        Self "range" 0 0 0 0 SetImagePosition
+        Self "range" 0 0 0 0 SetImageColor
     endif
 
 :Awake

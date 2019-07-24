@@ -12,7 +12,7 @@ $Speed:2.0 # movement speed, pixels per frame
 $BeamHealth:5.0 # "shields" while in the air
 $SniperHealth:300.0 # HP while on the ground
 
-$TargetOnly:"" # only target slected unit, leave blank for all targets
+$TargetOnly:"" # only target slected unit(s), leave blank for all targets, separate by comma
 $TargetClosest:0 # 1 = target closest unit, 0 = target random unit
 $TargetRange:9999 # max cell range (radius), use 9999 for infitite
 
@@ -31,11 +31,13 @@ $ImageRandom:"Custom25"
 $ImageFinite:"Custom26"
 $ImageInfinite:"Custom27"
 $ImageUfosOffset:28
+$ImageIconBg:"Custom32"
 
 #unit images
 $ImageOffset:40 # "Custom[offset]" is collector
 $ImageRainmaker:"Custom64" # hand-write custom target images
 $ImageFlipEmiter:"Custom65"
+$ImageRaincloud:"Custom66"
 
 once
     ShowTraceLog
@@ -45,9 +47,8 @@ once
     <-UfosSpawned 1 max 5 min ->UfosSpawned
     CreateList ->ActiveUfos
 
-    @Awake
     @DefineConstants
-    @CreateImages
+    @Awake
 
     0 ->Busy
     <-InitialDelay 30 mul ->nextUfo
@@ -56,7 +57,9 @@ once
     Self "TeamFlag.crpl" "TeamFlagAttached" GetScriptVar not if
         Self "TeamFlag.crpl" AddScriptToUnit
     endif
-    Self "TeamFlag.crpl" "IsEnemy" 0 SetScriptVar
+    Self "TeamFlag.crpl" "IsEnemy" 1 SetScriptVar
+    Self "TeamFlag.crpl" "IsFriendly" 0 SetScriptVar
+    Self "TeamFlag.crpl" "CanUfoTarget" 0 SetScriptVar
 endonce
 
 GetMouseCell CurrentCoords Distance 2.9 lte ->MouseOver
@@ -119,7 +122,7 @@ endif
 
     "Custom" <-ImageOffset 16 add concat ->IMG_BERTHA
     "Custom" <-ImageOffset 17 add concat ->IMG_GUPPYAIR
-    "Custom" <-ImageOffset 18 add concat ->IMG_STRATERAIR
+    "Custom" <-ImageOffset 18 add concat ->IMG_STRAFERAIR
     "Custom" <-ImageOffset 19 add concat ->IMG_BOMBERAIR
     
     "Custom" <-ImageOffset 20 add concat ->IMG_COMMANDNODE
@@ -127,43 +130,68 @@ endif
     
     <-ImageRainmaker "IMG_CRPLCORE:CloudMaker" ->!
     <-ImageFlipEmiter "IMG_CRPLCORE:FlipEmitter" ->!
+    <-ImageRaincloud "IMG_CRPLCORE:CreeperCloud" ->!
 
-    <-UfosSpawned CreateListStartingSize ->OffsetsX
-    <-UfosSpawned CreateListStartingSize ->OffsetsY
+    1 "ColorByAc_CRPLCORE:CloudMaker" ->!
+    1 "ColorByAc_CRPLCORE:FlipEmitter" ->!
+    1 "ColorByAc_CRPLCORE:CreeperCloud" ->!
 
-    12.0 ->offset
-    <-UfosSpawned 1 eq if
-        <-OffsetsX 0 0.0 SetListElement
-        <-OffsetsY 0 0.0 SetListElement
+    <-UfosSpawned 12.0 @CreateOffsetList ->OffsetsY ->OffsetsX
+
+    # parse "target only" parameter
+    <-TargetOnly "," Split ->TargetOnlyList
+    0 ->i
+    while <-i <-TargetOnlyList GetListCount lt repeat
+        <-TargetOnlyList <-i GetListElement ->tar
+        "IMG_" <-tar concat -?! not if
+            # invalid variable - destroy it from the list
+            <-TargetOnlyList <-i RemoveListElement
+        else
+            <-i 1 add ->i
+        endif
+    endwhile
+
+:CreateOffsetList # offset count, offset amount - listX listY
+    ->COL_Amt
+    5 min 1 max ->COL_Count
+    
+    <-COL_Count CreateListStartingSize ->COL_OffsetsX
+    <-COL_Count CreateListStartingSize ->COL_OffsetsY
+
+    <-COL_Count 1 eq if
+        <-COL_OffsetsX 0 0.0 SetListElement
+        <-COL_OffsetsY 0 0.0 SetListElement
     endif
-    <-UfosSpawned 2 eq if
-        <-OffsetsX 0 <-offset     SetListElement
-        <-OffsetsY 0 0.0          SetListElement
-        <-OffsetsX 1 <-offset neg SetListElement
-        <-OffsetsY 1 0.0          SetListElement
+    <-COL_Count 2 eq if
+        <-COL_OffsetsX 0 <-COL_Amt neg SetListElement
+        <-COL_OffsetsY 0 0.0           SetListElement
+        <-COL_OffsetsX 1 <-COL_Amt     SetListElement
+        <-COL_OffsetsY 1 0.0           SetListElement
     endif
-    <-UfosSpawned 3 eq if
-        <-OffsetsX 0 0.0                 SetListElement
-        <-OffsetsY 0 <-offset 1.333 mul  SetListElement
-        <-OffsetsX 1 <-offset neg        SetListElement
-        <-OffsetsY 1 <-offset -0.666 mul SetListElement
-        <-OffsetsX 2 <-offset            SetListElement
-        <-OffsetsY 2 <-offset -0.666 mul SetListElement
+    <-COL_Count 3 eq if
+        <-COL_OffsetsX 0 0.0                  SetListElement
+        <-COL_OffsetsY 0 <-COL_Amt 1.333 mul  SetListElement
+        <-COL_OffsetsX 1 <-COL_Amt neg        SetListElement
+        <-COL_OffsetsY 1 <-COL_Amt -0.666 mul SetListElement
+        <-COL_OffsetsX 2 <-COL_Amt            SetListElement
+        <-COL_OffsetsY 2 <-COL_Amt -0.666 mul SetListElement
     endif
-    <-UfosSpawned 4 gte if
-        <-OffsetsX 0 <-offset     SetListElement
-        <-OffsetsY 0 <-offset neg SetListElement
-        <-OffsetsX 1 <-offset neg SetListElement
-        <-OffsetsY 1 <-offset neg SetListElement
-        <-OffsetsX 2 <-offset neg SetListElement
-        <-OffsetsY 2 <-offset     SetListElement
-        <-OffsetsX 3 <-offset     SetListElement
-        <-OffsetsY 3 <-offset     SetListElement
+    <-COL_Count 4 gte if
+        <-COL_OffsetsX 0 <-COL_Amt neg SetListElement
+        <-COL_OffsetsY 0 <-COL_Amt     SetListElement
+        <-COL_OffsetsX 1 <-COL_Amt     SetListElement
+        <-COL_OffsetsY 1 <-COL_Amt     SetListElement
+        <-COL_OffsetsX 2 <-COL_Amt neg SetListElement
+        <-COL_OffsetsY 2 <-COL_Amt neg SetListElement
+        <-COL_OffsetsX 3 <-COL_Amt     SetListElement
+        <-COL_OffsetsY 3 <-COL_Amt neg SetListElement
     endif
-    <-UfosSpawned 5 eq if
-        <-OffsetsX 4 0.0 SetListElement
-        <-OffsetsY 4 0.0 SetListElement
+    <-COL_Count 5 eq if
+        <-COL_OffsetsX 4 0.0 SetListElement
+        <-COL_OffsetsY 4 0.0 SetListElement
     endif
+
+    <-COL_OffsetsX <-COL_OffsetsY return
 
 :RenderLines
     CurrentPixelCoords ->cy ->cx
@@ -202,7 +230,7 @@ endif
         <-ufo "UfoUnit.crpl" "Speed" <-Speed SetScriptVar
         <-ufo "UfoUnit.crpl" "BeamHealth" <-BeamHealth SetScriptVar
         <-ufo "UfoUnit.crpl" "SniperHealth" <-SniperHealth SetScriptVar
-        <-ufo "UfoUnit.crpl" "TargetOnly" <-TargetOnly SetScriptVar
+        <-ufo "UfoUnit.crpl" "TargetOnlyList" <-TargetOnlyList SetScriptVar
         <-ufo "UfoUnit.crpl" "TargetClosest" <-TargetClosest SetScriptVar
         <-ufo "UfoUnit.crpl" "TargetRange" <-TargetRange SetScriptVar
         <-ufo "UfoUnit.crpl" "OffsetX" <-OffsetsX I GetListElement SetScriptVar
@@ -286,14 +314,42 @@ endif
     Self "target" 20 -20 -0.01 SetImagePosition
     Self "target" 0.666666 dup SetImageScale
     
-    "IMG_" <-TargetOnly concat -?! if
-        Self "only" "IMG_" <-TargetOnly concat <-! SetImage
+    <-TargetOnlyList GetListCount 2 gte if
+        Self "only" <-ImageIconBg SetImage
         Self "only" -20 -20 -0.01 SetImagePosition
         Self "only" 0.666666 dup SetImageScale
     else
-        "" ->TargetOnly
         Self "only" "none" SetImage
     endif
+
+    # get AC color + convert black to dark brown
+    GetCreeperColors 255 mul ->B 255 mul ->G 255 mul ->R
+    <-R <-G <-B max max 64 lt if
+        <-R 64 add ->R
+        <-G 64 add ->G
+        <-B 64 add ->B
+    endif
+
+    <-TargetOnlyList GetListCount 4.0 @CreateOffsetList ->offsetsY ->offsetsX
+    <-TargetOnlyList GetListCount 0 do
+        <-TargetOnlyList I GetListElement ->img
+        "only" I concat ->name
+        Self <-name "IMG_" <-img concat <-! SetImage
+        Self <-name -20 <-offsetsX I GetListElement add -20 <-offsetsY I GetListElement add -0.02 SetImagePosition
+        <-TargetOnlyList GetListCount 1 eq if
+            Self <-name 0.666666 dup SetImageScale
+        else
+            Self <-name 0.333333 dup SetImageScale
+        endif
+        "ColorByAc_" <-img concat <-! if
+            Self <-name <-R <-G <-B 255 SetImageColor
+        else
+            Self <-name 255 255 255 255 SetImageColor
+        endif
+    loop
+    5 <-TargetOnlyList GetListCount do
+        Self "only" I concat "none" SetImage
+    loop
 
     <-UfosSpawned 1 gt if
         Self "ufos" "Custom" <-UfosSpawned 2 sub <-ImageUfosOffset add concat SetImage
@@ -332,5 +388,6 @@ endif
 
     1 OperateWhilePaused
 
+    @CreateImages
     0 ->LineAlpha
     @RenderLines
