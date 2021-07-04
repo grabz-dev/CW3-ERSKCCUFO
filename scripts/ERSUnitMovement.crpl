@@ -2,6 +2,9 @@
 # Created on: 6/23/2019 2:37:12 PM
 # ------------------------------------------
 $Speed:2.0
+$Alternative_pathing:0 #If 1, makes the unit use the Waypoint cores instead. 
+$Alternative_pathing_circle:0 # If 1, causes the unit to traverse the waypoints in a closed loop.
+$ERS_ID:0 #ID of the ERS unit for alternative pathing
 $Waypoint1:""
 $Waypoint2:""
 $Waypoint3:""
@@ -29,32 +32,78 @@ once
 
     <-Speed 8.0 mul 30.0 div ->fSpeedPerCell
 endonce
+<-Alternative_pathing eq0 if
+	Self "ERSUnitBase.crpl" "G_sState" GetScriptVar ->G_sState
 
-Self "ERSUnitBase.crpl" "G_sState" GetScriptVar ->G_sState
+	<-G_sState "ACTIVE" eq if 
+		<-G_iLastWaypoint 0 gt if
+			GetQueuedMoveCount eq0 if
+				<-G_iLastWaypoint 1 add 1 do
+					"Waypoint" I concat "x" concat <-! "Waypoint" I concat "y" concat <-! <-fSpeedPerCell QueueMove
+				loop
+			endif
 
-<-G_sState "ACTIVE" eq if 
-    <-G_iLastWaypoint 0 gt if
-        GetQueuedMoveCount eq0 if
-            <-G_iLastWaypoint 1 add 1 do
-                "Waypoint" I concat "x" concat <-! "Waypoint" I concat "y" concat <-! <-fSpeedPerCell QueueMove
-            loop
-        endif
+			CurrentPixelCoords ->fPixelY ->fPixelX
 
-        CurrentPixelCoords ->fPixelY ->fPixelX
+			<-G_fRotation <-fPixelX <-fLastPixelX sub 10.0 div sub ->G_fRotation
 
-        <-G_fRotation <-fPixelX <-fLastPixelX sub 10.0 div sub ->G_fRotation
+			<-G_fRotation PI 2 mul gt if
+				<-G_fRotation PI 2 mul sub ->G_fRotation
+			endif
+			<-G_fRotation PI -2 mul lt if
+				<-G_fRotation PI 2 mul add ->G_fRotation
+			endif
 
-        <-G_fRotation PI 2 mul gt if
-            <-G_fRotation PI 2 mul sub ->G_fRotation
-        endif
-        <-G_fRotation PI -2 mul lt if
-            <-G_fRotation PI 2 mul add ->G_fRotation
-        endif
+			Self "wheels" <-G_fRotation SetImageRotation
 
-        Self "wheels" <-G_fRotation SetImageRotation
+			<-fPixelX <-fPixelY ->fLastPixelY ->fLastPixelX
+		endif
+	endif
+else
+	once
+		"ERS_WAY_ID" <-ERS_ID GetCoresWithVar ->count
+		<-count CreateListStartingSize ->WaypointX
+		<-count CreateListStartingSize ->WaypointY
+		<-count CreateListStartingSize ->WaypointHaste
+		<-count 0 do
+			->unitUID
+			<-unitUID "Waypoint.crpl" "WP_ID" GetScriptVar ->WP_ID
+			<-WaypointHaste <-WP_ID <-unitUID "Waypoint.crpl" "ERS_HASTE" GetScriptVar SetListElement
+			<-WaypointX <-WP_ID <-unitUID CONST_COORDX GetUnitAttribute SetListElement
+			<-WaypointY <-WP_ID <-unitUID CONST_COORDY GetUnitAttribute SetListElement
+		loop
+	endonce
+	Self "ERSUnitBase.crpl" "G_sState" GetScriptVar ->G_sState
 
-        <-fPixelX <-fPixelY ->fLastPixelY ->fLastPixelX
-    endif
+	<-G_sState "ACTIVE" eq if 
+		<-CurrWaypoint <-count eq if
+			<-Alternative_pathing_circle if
+				0 ->CurrWaypoint
+			else
+				return
+			endif
+		endif
+		GetQueuedMoveCount eq0 if
+			<-WaypointX <-CurrWaypoint GetListElement <-WaypointY <-CurrWaypoint GetListElement <-WaypointHaste <-CurrWaypoint GetListElement 8.0 mul 30.0 div <-fSpeedPerCell add QueueMove
+			<-CurrWaypoint 1 add ->CurrWaypoint
+		endif
+		
+
+		CurrentPixelCoords ->fPixelY ->fPixelX
+
+		<-G_fRotation <-fPixelX <-fLastPixelX sub 10.0 div sub ->G_fRotation
+
+		<-G_fRotation PI 2 mul gt if
+			<-G_fRotation PI 2 mul sub ->G_fRotation
+		endif
+		<-G_fRotation PI -2 mul lt if
+			<-G_fRotation PI 2 mul add ->G_fRotation
+		endif
+
+		Self "wheels" <-G_fRotation SetImageRotation
+
+		<-fPixelX <-fPixelY ->fLastPixelY ->fLastPixelX
+	endif
 endif
 
 :awake

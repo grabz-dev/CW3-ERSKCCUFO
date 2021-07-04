@@ -1,0 +1,17 @@
+$WAYPOINT:1
+$PERF_IMP:1 #If 1 this unit destroys itself after 20 frames to not affect performance.
+$ERS_WAY_ID:0 #ID of an ERS unit moving to it
+$WP_ID:0 #Order of the waypoint 0-X
+$ERS_HASTE:0.0 #Alters the speed of a unit moving TOWARDS it by that much
+<-PERF_IMP if
+	20 Delay
+	Self 0 Destroy
+endif
+:awake
+	Self CONST_COUNTSFORVICTORY 0 SetUnitAttribute 
+	Self CONST_NULLIFIERDAMAGES 0 SetUnitAttribute 
+	Self CONST_SUPPORTSDIGITALIS 0 SetUnitAttribute
+	Self CONST_CREATEPZ 0 SetUnitAttribute
+	Self "main" "NONE" SetImage
+	Self "main" 0 0 0 0 SetImageColor
+	Self CONST_TAKEMAPSPACE  0 SetUnitAttribute
